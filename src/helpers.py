@@ -161,8 +161,28 @@ def get_best_results(history):
     best_epoch = np.array(history["val_accuracies"]).argmax()
     best_training_accuracy = history['train_accuracies'][best_epoch]
     best_dev_accuracy = history['val_accuracies'][best_epoch]
-    best_train_cf = history['train_cf'][best_epoch]
-    best_val_cf = history['val_cf'][best_epoch]
-    
+
     return(best_epoch, best_training_accuracy, best_dev_accuracy, 
            best_train_cf, best_val_cf)
+
+
+def get_avg_results(histories, k = 5):
+    '''
+    This function takes in a 
+    list of history dictionaries
+    where the list is of length k. 
+    k is the no. of folds we have
+    used in cross-validation. This
+    will return the mean value at
+    every epoch across folds.
+    '''
+    avg_history = { }
+    avg_history['train_accuracies'] = np.mean(np.array([history['train_accuracies'] for history in histories]), axis = 0)
+    avg_history['val_accuracies'] = np.mean(np.array([history['val_accuracies'] for history in histories]), axis = 0)
+
+    return(avg_history)
+    
+
+
+
+
