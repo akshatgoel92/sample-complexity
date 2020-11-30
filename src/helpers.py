@@ -100,11 +100,10 @@ def get_k_folds(X, Y, k):
     into the k sub-arrays where each sub-array
     is a fold.
     '''
-    fold_length = int(np.round(max(X_train.shape)/k))
-    X_train_folds = np.split(X_train_folds.copy(), fold_length)
-    Y_train_folds = np.split(Y_train_folds.copy(), fold_length)
+    X_folds = np.array_split(X.copy(), k)
+    Y_folds = np.array_split(Y.copy(), k)
     
-    return(X_train_folds, Y_train_folds)
+    return(X_folds, Y_folds)
 
 
 def get_accuracy(target, pred):
@@ -145,3 +144,25 @@ def get_confusion_matrix(target, pred):
     
     # Return statement
     return(cf)
+
+
+def get_best_results(history):
+    '''
+    This function takes in a 
+    dictionary containing an
+    epoch-wise record of training
+    and validation set binary accuracies
+    and returns the epoch at which the highest
+    binary accuracy was reached on the dev. set 
+    along with the associated accuracies on both
+    training and dev. set at that epoch.
+    '''
+    # Store results
+    best_epoch = np.array(history["val_accuracies"]).argmax()
+    best_training_accuracy = history['train_accuracies'][best_epoch]
+    best_dev_accuracy = history['val_accuracies'][best_epoch]
+    best_train_cf = history['train_cf'][best_epoch]
+    best_val_cf = history['val_cf'][best_epoch]
+    
+    return(best_epoch, best_training_accuracy, best_dev_accuracy, 
+           best_train_cf, best_val_cf)
