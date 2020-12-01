@@ -162,8 +162,7 @@ def get_best_results(history):
     best_training_accuracy = history['train_accuracies'][best_epoch]
     best_dev_accuracy = history['val_accuracies'][best_epoch]
 
-    return(best_epoch, best_training_accuracy, best_dev_accuracy, 
-           best_train_cf, best_val_cf)
+    return(best_epoch, best_training_accuracy, best_dev_accuracy)
 
 
 def get_avg_results(histories, k = 5):
