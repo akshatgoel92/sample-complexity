@@ -6,13 +6,33 @@ import matplotlib.pyplot as plt
 import helpers as helpers
 
 
+# We need to find a single pixel which satisfies the following conditions
+# There are 10 threshold values such that the dataset when split according to 
+# these values minimizes total Gini index at each split
+# We can do this as follows: 
+# 1) Each feature is a pixel from 1 to 256
+# 2) For each feature: we cycle through each possible feature value from 1 to 255
+# 3) For each feature value: we set that as threshold
+# 4) We separate features into 2 groups based on this threshold
+# 5) 
+
+
+def test(train, i, val):
+
+    train[]
+
+
+
+
+
+
 def test_split(X, i, val):
     '''
     Take in an attribute and threshold value. 
     Return split dataset based on that threshold
     value.
     '''
-    # Mask to check which point
+    # Mask to check which point is below a given threshold
     below_val = (X[:, i] < val)
     # Return statement
     return(X[below_val], X[~below_val])
@@ -39,20 +59,20 @@ def get_overall_gini(gini_indices):
     pass
 
 
-def get_split(X, n_classes):
+def test_split(X, n_classes):
     '''
     This function iteratively
-    tests each possble split of
+    tests each possible split of
     a given dataset and returns 
     the newly created groups based
     on the best split.
     '''
     class_values = range(n_classes)
-    best_index, best_value, best_score, best_groups = 999, 999, 999, None
+    best_index, best_value, best_score, best_groups = 999, 999, 999, 999, None
     
     for i in range(len(X[0]) -1):
         for row in X:
-            groups = test_split(X, i, row[index])
+            groups = get_split(X, i, row[index])
             gini = get_gini_index(groups)
             if gini < b_score:
                 best_index, best_value, best_score, best_groups = i, row[i], gini, groups
