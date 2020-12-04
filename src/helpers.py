@@ -161,6 +161,17 @@ def get_best_results(history):
     return(best_epoch, best_training_accuracy, best_dev_accuracy)
 
 
+def sigmoid(x):
+    '''
+    Calculates sigmoid activation value at x.
+    '''
+    return 1/(1+np.exp(-x))
+
+
+def sigmoid_derivate():
+    pass
+
+
 def get_avg_results(histories, k = 5):
     '''
     This function takes in a 
