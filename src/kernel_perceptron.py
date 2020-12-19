@@ -52,7 +52,7 @@ def train_perceptron(X_train, Y_train,
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
     # Store encoding
-    Y_encoding = get_one_vs_all_encoding(Y_train, n_classes)
+    Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
     
     # Initialize alpha weights and store 
     # the number of samples
@@ -116,46 +116,6 @@ def train_perceptron(X_train, Y_train,
     return(history)
 
 
-
-def get_one_vs_all_encoding(Y_train, n_classes):
-    '''
-    --------------------------------------
-    Get one hot encoded labels for 1 vs. all
-    --------------------------------------
-    '''
-    Y = np.full(Y_train.size*n_classes, -1).reshape(Y_train.size, n_classes)
-    Y[np.arange(Y_train.size), Y_train] = 1
-
-    return(Y)
-
-
-def get_all_pairs_encoding(n_classes, Y_train, i):
-    '''
-    --------------------
-    Return the encoding matrix for
-    all pairs multi-class kernel perceptron
-    --------------------
-    '''
-    pass
-
-
-def get_signs(Y_hat, Y):
-    '''
-    --------------------------------------
-    Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
-    # The 0 labels in the encoding matrix should not contribute
-    # to classification
-    --------------------------------------
-    '''
-    signs = np.ones(Y_hat.shape)
-    signs[Y_hat <= 0] = -1
-    signs[Y == 0] = 0
-
-    return(signs)
-
-
-
 def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     '''
     --------------------------------------
@@ -174,11 +134,12 @@ def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     '''
 
     Y = Y[i]
-    signs = get_signs(Y_hat, Y)
+    signs = helpers.get_signs(Y_hat, Y)
     wrong = (Y*Y_hat <= 0)
     alpha[wrong, i] -= (signs[wrong])
     
     return(alpha)
+
 
 
 def run_test_case(epochs, kernel_type, d, n_classes):

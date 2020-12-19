@@ -222,6 +222,44 @@ def get_predictions(alpha, K_examples):
     
     # Return statement
     return(Y_hat, preds)
+
+
+def get_one_vs_all_encoding(Y_train, n_classes):
+    '''
+    --------------------------------------
+    Get one hot encoded labels for 1 vs. all
+    --------------------------------------
+    '''
+    Y = np.full(Y_train.size*n_classes, -1).reshape(Y_train.size, n_classes)
+    Y[np.arange(Y_train.size), Y_train] = 1
+
+    return(Y)
+
+
+def get_all_pairs_encoding(n_classes, Y_train, i):
+    '''
+    --------------------
+    Return the encoding matrix for
+    all pairs multi-class kernel perceptron
+    --------------------
+    '''
+    pass
+
+
+def get_signs(Y_hat, Y):
+    '''
+    --------------------------------------
+    Returns raw predictions and class predictions
+    given alpha weights and Gram matrix K_examples.
+    # The 0 labels in the encoding matrix should not contribute
+    # to classification
+    --------------------------------------
+    '''
+    signs = np.ones(Y_hat.shape)
+    signs[Y_hat <= 0] = -1
+    signs[Y == 0] = 0
+
+    return(signs)
     
 
 
