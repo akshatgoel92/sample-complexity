@@ -8,46 +8,6 @@ import matplotlib.pyplot as plt
 import helpers
 
 
-
-
-
-def get_predictions(alpha, K_examples):
-    '''
-    Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
-    '''
-    # Take the maximum argument in each column
-    Y_hat = alpha @ K_examples
-    preds = np.argmax(Y_hat, axis = 0)
-    
-    # Return statement
-    return(Y_hat, preds)
-
-
-def get_update(Y_train, Y_hat, alpha, n_classes, i):
-    '''
-    Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
-    '''
-    # Now first make a matrix Y with dim(Y) ---> (n_classes,) which is only filled with -1
-    # Then get the label from the Y_train matrix
-    # If this label is 6 then we want to change the 6th index to 1
-    Y = np.full(n_classes, -1)
-    Y[int(Y_train[i])] = 1
-            
-    # Compute sign of predictions
-    # This is used in the update
-    signs = np.ones(Y_hat.shape)
-    signs[Y_hat <= 0] = -1
-            
-    # Check if the prediction is correct against the labels
-    # If it is correct we don't need to make any updates: we just move to the next iteration
-    # If it is not correct then we update the weights and biases in the direction of the label
-    alpha[Y*Y_hat <= 0, i] -= (signs[Y*Y_hat <= 0])
-    
-    return(alpha)
-
-
 def train_kernel_perceptron(X_train, Y_train, X_val, Y_val, epochs, kernel_type, d, n_classes):
     '''
     This is the main training loop for
@@ -121,8 +81,48 @@ def train_kernel_perceptron(X_train, Y_train, X_val, Y_val, epochs, kernel_type,
     return(history)
 
 
-def run_perceptron_training(epochs, data_path = os.path.join('..', 'data'), name = 'zipcombo.dat', 
-                            kernel_type = 'polynomial', d = 5, n_classes=10, train_percent=0.8):
+def get_predictions(alpha, K_examples):
+    '''
+    Returns raw predictions and class predictions
+    given alpha weights and Gram matrix K_examples.
+    '''
+    # Take the maximum argument in each column
+    Y_hat = alpha @ K_examples
+    preds = np.argmax(Y_hat, axis = 0)
+    
+    # Return statement
+    return(Y_hat, preds)
+
+
+def get_update(Y_train, Y_hat, alpha, n_classes, i):
+    '''
+    Returns raw predictions and class predictions
+    given alpha weights and Gram matrix K_examples.
+    '''
+    # Now first make a matrix Y with dim(Y) ---> (n_classes,) which is only filled with -1
+    # Then get the label from the Y_train matrix
+    # If this label is 6 then we want to change the 6th index to 1
+    Y = np.full(n_classes, -1)
+    Y[int(Y_train[i])] = 1
+            
+    # Compute sign of predictions
+    # This is used in the update
+    signs = np.ones(Y_hat.shape)
+    signs[Y_hat <= 0] = -1
+            
+    # Check if the prediction is correct against the labels
+    # If it is correct we don't need to make any updates: we just move to the next iteration
+    # If it is not correct then we update the weights and biases in the direction of the label
+    alpha[Y*Y_hat <= 0, i] -= (signs[Y*Y_hat <= 0])
+    
+    return(alpha)
+
+
+
+
+
+def run_training(epochs, data_path = os.path.join('..', 'data'), name = 'zipcombo.dat', 
+                 kernel_type = 'polynomial', d = 5, n_classes=10, train_percent=0.8):
     '''
     Execute the training steps above and generate
     the results that have been specified in the report.
@@ -146,6 +146,7 @@ def run_perceptron_training(epochs, data_path = os.path.join('..', 'data'), name
     
     # Return statement
     return(history, best_epoch, best_training_accuracy, best_dev_accuracy)
+
 
 def run_k_fold_cross_val(epochs, data_path = os.path.join('..', 'data'), 
                          name = 'zipcombo.dat', kernel_type = 'polynomial', 
@@ -195,9 +196,12 @@ def run_k_fold_cross_val(epochs, data_path = os.path.join('..', 'data'),
     return(avg_history, best_epoch, best_training_accuracy, best_dev_accuracy)
 
 
-
-
 def run_multiple(params, kwargs):
+    '''
+    Run multiple runs of kernel 
+    perceptron training with a given 
+    set of parameters
+    '''
     
     histories = {
         
@@ -247,8 +251,8 @@ if __name__ == '__main__':
     np.random.seed(13290138)
     
     # Load data
-    X_train, Y_train = helpers.load_data(os.path.join("..", "data"), "dtrain123.dat")
-    X_val, Y_val = helpers.load_data(os.path.join("..", "data"), "dtest123.dat")
+    X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
+    X_val, Y_val = helpers.load_data("data", "dtest123.dat")
 
     Y_train = Y_train - 1
     Y_val = Y_val - 1
@@ -258,16 +262,24 @@ if __name__ == '__main__':
     kernel_type = 'polynomial'
     d=3
 
-    history = train_kernel_perceptron(X_train, Y_train, 
-                                  X_val, Y_val, epochs,
-                                  kernel_type, d, n_classes)
-
-
-
+    history = train_perceptron(X_train, Y_train, X_val, Y_val, epochs, 
+                               kernel_type, d, n_classes)
 
 
     # Store parameter list
     params = [1, 2, 3, 4, 5, 6, 7]
+
+    # Search for the best parameters with the polynomial kernel
+    grid_search_args = {
+    
+        'epochs': 100, 
+        'data_path': os.path.join('..', 'data'), 
+        'name': 'zipcombo.dat', 
+        'kernel_type': 'polynomial', 
+        'n_classes': 10,
+        'k': 5
+    
+    }
 
 
     # Store arguments for this
@@ -283,19 +295,6 @@ if __name__ == '__main__':
 
     # Call training function multiple runs
     multiple_histories = run_multiple(params, multiple_run_args)
-
-
-    # Search for the best parameters with the polynomial kernel
-    grid_search_args = {
-    
-        'epochs': 100, 
-        'data_path': os.path.join('..', 'data'), 
-        'name': 'zipcombo.dat', 
-        'kernel_type': 'polynomial', 
-        'n_classes': 10,
-        'k': 5
-    
-    }
 
     # Call training function with k-fold cross validation
     cross_val_histories = run_grid_search(params, grid_search_args)
