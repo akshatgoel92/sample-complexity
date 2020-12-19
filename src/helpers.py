@@ -77,14 +77,25 @@ def get_polynomial_kernel(X, X_, d):
     return(np.power(np.dot(X, X_.T), d))
 
 
-def get_gaussian_kernel(X, Y_, c):
+def get_gaussian_kernel(X, X_test, c):
     '''
-    Take in two matrices and a kernel
-    parameter C and return the Gram matrix
-    K(x, x_) for the Gaussian kernel between
-    X and X_.
+    --------------------------
+    Input: X: Training matrix
+           X_test: Testing matrix
+           sigma: Parameter for Kernel
+    Output: Gaussian kernel matrix K(X, X_test)
+    
+    This function computes the 
+    Gaussian kernel matrix for X and X_test.
+    It calls the pairwise distance function above
+    to first create the matrix of distances. Then 
+    It scales and exponentiates them to recover 
+    the kernel values.
+    -------------------------
     '''
-    return np.exp((-linalg.norm(x-y)**2)*c)
+    K = np.einsum('ij,ij->i',X, X)[:,None] + np.einsum('ij,ij->i',X_test,X_test) - 2*np.dot(X,X_test.T)
+    K = np.exp(K*-c)
+    return(K)
 
 
 def get_k_folds(X, Y, k):
