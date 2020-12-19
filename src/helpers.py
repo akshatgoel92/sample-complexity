@@ -198,6 +198,30 @@ def get_avg_results(histories, k = 5):
     avg_history['val_accuracies'] = np.mean(np.array([history['val_accuracies'] for history in histories]), axis = 0)
 
     return(avg_history)
+
+
+def has_improved(max_accuracy, curr_accuracy):
+    '''
+    --------------------------------------
+    Check to see whether there has been an improvement
+    ----
+    '''
+    return(curr_accuracy > max_accuracy)
+
+
+def get_predictions(alpha, K_examples):
+    '''
+    --------------------------------------
+    Returns raw predictions and class predictions
+    given alpha weights and Gram matrix K_examples.
+    --------------------------------------
+    '''
+    # Take the maximum argument in each column
+    Y_hat = alpha @ K_examples
+    preds = np.argmax(Y_hat, axis = 0)
+    
+    # Return statement
+    return(Y_hat, preds)
     
 
 

@@ -4,11 +4,20 @@ import helpers
 import numpy as np 
 import matplotlib.pyplot as plt
 
+# Potential report content
+# Talk about effect of dimensionality on overfitting
+# Expand the Gaussian kernel into its feature map and speak about the role of c as a regularizer
+# Try to answer the question: for what values of C does Gaussian kernel mimic a polynomial kernel? 
+# Potentially make a plot for the above
+
+# Questions: 
+# Do we shuffle the data at each epoch?
+
 
 
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
-                     kernel_type, d, n_classes):
+                     kernel_type, d, n_classes, cf = False):
     '''
     --------------------------------------
     This is the main training loop for
@@ -22,6 +31,10 @@ def train_perceptron(X_train, Y_train,
         "train_cf": [],
         "val_cf": []
     }
+
+    # Store minimum loss for convergence check
+    max_accuracy = 0
+    counter = 0
     
     # Transform X according to the user specified kernel
     # Can be either polynomial kernel or Gaussian kernel
@@ -34,17 +47,23 @@ def train_perceptron(X_train, Y_train,
     
     elif kernel_type == 'gaussian':
 
-        print("Using Gaussian kernel...")
+        print("Using normal kernel...")
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
+
+    # Store encoding
+    Y_encoding = get_one_vs_all_encoding(Y_train, n_classes)
     
     # Initialize alpha weights and store 
     # the number of samples
     alpha = np.zeros((n_classes, K_train.shape[0]))
     n_samples = np.max(Y_train.shape)
-    
+
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
+
+        if counter >=10:
+            break
         
         # Print the epoch number to track progress
         print('This is epoch number: {}'.format(epoch))
@@ -52,108 +71,114 @@ def train_perceptron(X_train, Y_train,
         # Do this for each example in the dataset
         for i in range(n_samples):
             # Compute the prediction with the current weights:
-            # dim(A) --> (10, 6199), dim(X_train[i, :]) ---> (6199, 1) ====> dim(y_hat) --> 10 X 1
-            Y_hat, _ = get_predictions(alpha, K_train[i, :])
+            # dim(alpha) --> (10, 6199), 
+            # dim(K_train[i, :]) ---> (6199, 1) 
+            # ====> dim(y_hat) --> 10 X 1
+            Y_hat, _ = helpers.get_predictions(alpha, K_train[i, :])
             
             # Perform update by calling the function above
-            alpha = get_new_update(Y_train, Y_hat, alpha, n_classes, i)
+            alpha = get_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding)
             
         # We finally compute predictions and accuracy at the end of each epoch
         # It is a mistake if the class with the highest predicted value does not equal the true label
         # mistakes += int((np.argmax(Y_hat) + 1) != int(Y_train[i]))
-        Y_hat_train, preds_train = get_predictions(alpha, K_train)
+        Y_hat_train, preds_train = helpers.get_predictions(alpha, K_train)
         train_accuracy = helpers.get_accuracy(Y_train, preds_train)
             
         # Now we compute validation predictions
-        Y_hat_val, preds_val = get_predictions(alpha, K_val)
+        Y_hat_val, preds_val = helpers.get_predictions(alpha, K_val)
         val_accuracy = helpers.get_accuracy(Y_val, preds_val)
-        
-        # At the end of each epoch we get confusion matrices
-        train_cf = helpers.get_confusion_matrix(Y_train, preds_train)
-        val_cf = helpers.get_confusion_matrix(Y_val, preds_val)
+
+        if helpers.has_improved(max_accuracy, val_accuracy):
+            max_accuracy = val_accuracy
+        else:
+            counter +=1
         
         # We append to the history dictionary as a record
         history['train_accuracies'].append(train_accuracy)
         history['val_accuracies'].append(val_accuracy)
-        history['train_cf'].append(train_cf)
-        history['val_cf'].append(val_cf)
+
+        if cf: 
+        
+            # At the end of each epoch we get confusion matrices
+            train_cf = helpers.get_confusion_matrix(Y_train, preds_train)
+            val_cf = helpers.get_confusion_matrix(Y_val, preds_val)
+            history['train_cf'].append(train_cf)
+            history['val_cf'].append(val_cf)
+
         
         # We print the accuracies at the end of each epoch
         msg = '{} accuracy on epoch {}: {}'
-        print(msg.format('train', epoch, train_accuracy))
-        print(msg.format('validation', epoch, val_accuracy))
+        print(msg.format('Train', epoch, train_accuracy))
+        print(msg.format('Validation', epoch, val_accuracy))
     
     # Return statement
     return(history)
 
 
-def get_predictions(alpha, K_examples):
-    '''
-    --------------------------------------
-    Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
-    --------------------------------------
-    '''
-    # Take the maximum argument in each column
-    Y_hat = alpha @ K_examples
-    preds = np.argmax(Y_hat, axis = 0)
-    
-    # Return statement
-    return(Y_hat, preds)
 
-
-def get_one_hot_encoding(n_classes, Y_train, i):
+def get_one_vs_all_encoding(Y_train, n_classes):
     '''
     --------------------------------------
     Get one hot encoded labels for 1 vs. all
     --------------------------------------
     '''
-    Y = np.full(n_classes, -1)
-    Y[int(Y_train[i])] = 1
+    Y = np.full(Y_train.size*n_classes, -1).reshape(Y_train.size, n_classes)
+    Y[np.arange(Y_train.size), Y_train] = 1
 
     return(Y)
 
 
-def get_signs(Y_hat):
+def get_all_pairs_encoding(n_classes, Y_train, i):
+    '''
+    --------------------
+    Return the encoding matrix for
+    all pairs multi-class kernel perceptron
+    --------------------
+    '''
+    pass
+
+
+def get_signs(Y_hat, Y):
     '''
     --------------------------------------
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
+    # The 0 labels in the encoding matrix should not contribute
+    # to classification
     --------------------------------------
     '''
     signs = np.ones(Y_hat.shape)
     signs[Y_hat <= 0] = -1
+    signs[Y == 0] = 0
 
     return(signs)
 
 
 
-def get_new_update(Y_train, Y_hat, alpha, n_classes, i):
+def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     '''
     --------------------------------------
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
-    --------------------------------------
-    '''
+
     # Now first make a matrix Y with dim(Y) ---> (n_classes,) which is only filled with -1
     # Then get the label from the Y_train matrix
     # If this label is 6 then we want to change the 6th index to 1
-    Y = get_one_hot_encoding(n_classes, Y_train, i)
-
-    # Compute sign of predictions
-    # This is used in the update
-    signs = get_signs(Y_hat)
-
-    # Store indices to update
-    wrong = (Y*Y_hat <=0)
-            
+    # Y = get_one_hot_encoding(n_classes, Y_train, i)
+    # Compute sign of predictions and store indices to update        
     # Check if the prediction is correct against the labels
     # If it is correct we don't need to make any updates: we just move to the next iteration
     # If it is not correct then we update the weights and biases in the direction of the label
+    --------------------------------------
+    '''
+
+    Y = Y[i]
+    signs = get_signs(Y_hat, Y)
+    wrong = (Y*Y_hat <= 0)
     alpha[wrong, i] -= (signs[wrong])
     
     return(alpha)
-
 
 
 def run_test_case(epochs, kernel_type, d, n_classes):
@@ -169,11 +194,13 @@ def run_test_case(epochs, kernel_type, d, n_classes):
     Y_train = Y_train - 1
     Y_val = Y_val - 1
 
+    Y_train = Y_train.astype(int)
+    Y_val = Y_val.astype(int)
+
     history = train_perceptron(X_train, Y_train, X_val, Y_val, epochs, 
                                kernel_type, d, n_classes)
 
     return(history)
-
 
 
 
@@ -319,17 +346,12 @@ if __name__ == '__main__':
     run_multiple = 0
     run_cross_val = 0
 
-
-    # Store parameter list
-    params = [1, 2, 3, 4, 5, 6, 7]
-
-    
     # Store test arguments
     test_args = {
 
-    'kernel_type': 'gaussian',
+    'kernel_type': 'polynomial',
     'n_classes': 3,
-    'epochs':100,
+    'epochs':20,
     'd':3,
 
     }
@@ -349,7 +371,7 @@ if __name__ == '__main__':
     # Search for the best parameters with the polynomial kernel
     grid_search_args = {
     
-        'epochs': 100, 
+        'epochs': 4, 
         'data_path': 'data', 
         'name': 'zipcombo.dat', 
         'kernel_type': 'gaussian', 
@@ -358,6 +380,8 @@ if __name__ == '__main__':
     
     }
 
+    # Store kernel parameter list to iterate over
+    params = [1, 2, 3, 4, 5, 6, 7]
 
     if run_test == 1:
         # Call test function
@@ -370,21 +394,3 @@ if __name__ == '__main__':
     if run_cross_val == 1:
         # Call training function with k-fold cross validation
         cross_val_histories = run_grid_search(params, grid_search_args)
-
-
-    # To do for this script:
-    # Make plots of losses to see whether it is converging
-    # Check shapes of all matrices
-    # Take a look at the actual data in each matrix
-    # Take a look at each weight
-    # Take a look at whether kernel arguments are being sent in correctly
-    # Test Gaussian kernel
-
-    # Potential report content
-    # Talk about effect of dimensionality on overfitting
-    # Expand the Gaussian kernel into its feature map and speak about the role of c as a regularizer
-    # Try to answer the question: for what values of C does Gaussian kernel mimic a polynomial kernel? 
-    # Potentially make a plot for the above
-
-    # Questions: 
-    # Do we shuffle the data at each epoch?
