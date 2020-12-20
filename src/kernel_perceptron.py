@@ -5,6 +5,12 @@ import helpers
 import numpy as np 
 import matplotlib.pyplot as plt
 
+# Checks to do:
+# 1) Check CV method of averaging
+# 2) Change from accuracy to error everywhere
+# 3) Check how best to represent sum 
+# 4) Check how best to represent 
+
 # Potential report content
 # Talk about effect of dimensionality on overfitting
 # Expand the Gaussian kernel into its feature map and speak about the role of c as a regularizer
@@ -19,7 +25,7 @@ import matplotlib.pyplot as plt
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
                      kernel_type, d, n_classes, 
-                     cf = False, fit_type = 'one_vs_all', 
+                     cm = False, fit_type = 'one_vs_all', 
                      convergence_epochs=10):
     '''
     --------------------------------------
@@ -101,7 +107,7 @@ def train_perceptron(X_train, Y_train,
         history['train_accuracies'].append(train_accuracy)
         history['val_accuracies'].append(val_accuracy)
 
-        if cf: 
+        if cm: 
         
             # At the end of each epoch we get confusion matrices
             train_cf = helpers.get_confusion_matrix(Y_train, preds_train)
@@ -219,7 +225,7 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
 
 
 
-def run_multiple_cv(params, data_args, kwargs):
+def run_multiple_cv(params, data_args, kwargs, total_runs=2):
     '''
     --------------------------------------
     Check which kernel parameter results
@@ -228,65 +234,85 @@ def run_multiple_cv(params, data_args, kwargs):
     '''
     results = []
     
-    for param in params: 
+    for run in range(total_runs):
 
         histories = {
         
-        'params': param, 
-        'history': [],
-        'best_epoch': [],
-        'best_training_accuracy': [],
-        'best_dev_accuracy': [],
-        }
+            'params': params, 
+            'history': [],
+            'best_epoch': [],
+            'best_training_accuracy': [],
+            'best_dev_accuracy': [],
+            }
 
-        for run in range(total_runs):
+        # Prepare data for the perceptron
+        X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
+        X, Y = helpers.shuffle_data(X, Y)
+
+        X_train, X_test, Y_train, Y_test = helpers.split_data(X, Y, data_args['train_percent'])
+        Y_train = Y_train.astype(int)
+        Y_test = Y_test.astype(int)
             
-            # Prepare data for the perceptron
-            X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
-    
-            # Shuffle the dataset before splitting it
-            X, Y = helpers.shuffle_data(X, Y)
+        X_folds, Y_folds = helpers.get_k_folds(X_train, Y_train, data_args['k'])
 
-            # Split the data
-            X_train, X_test, Y_train, Y_test = helpers.split_data(X, Y, data_args['train_percent'])
-            Y_train = Y_train.astype(int)
-            Y_test = Y_test.astype(int)
-    
-            # Split the data into training and validation set 
-            X_folds, Y_folds = helpers.get_k_folds(X_train, Y_train, data_args['k'])
-    
-            # Initiate histories object
-            run_histories = []
+        for param in params: 
+
+            fold_histories = []
     
             # Now go through each fold : every fold becomes the hold-out set at least once
             for fold_no in range(data_args['k']):
         
                 # Put in the x-values
-                X_train = np.concatenate(X_folds[:fold_no] + X_folds[fold_no+1:])
-                X_val = X_folds[fold_no]
+                X_train_fold = np.concatenate(X_folds[:fold_no] + X_folds[fold_no+1:])
+                X_val_fold = X_folds[fold_no]
         
                 # Put in the Y values
-                Y_train = np.concatenate(Y_folds[:fold_no] + Y_folds[fold_no+1:])
-                Y_val =  Y_folds[fold_no]
+                Y_train_fold = np.concatenate(Y_folds[:fold_no] + Y_folds[fold_no+1:])
+                Y_val_fold =  Y_folds[fold_no]
         
                 # Call the perceptron training with the given epochs
-                history = train_perceptron(X_train, Y_train, 
-                                           X_val, Y_val, **cv_args, d=param)
+                history = train_perceptron(X_train_fold, Y_train_fold, 
+                                           X_val_fold, Y_val_fold, **cv_args, d=param)
         
                 # Append to the histories file the epoch by epoch record of each fold
-                run_histories.append(history)
+                fold_histories.append(history)
             
             # Get avg. accuracies by epoch across folds
-            avg_history = helpers.get_cv_results(run_histories)
+            avg_history = helpers.get_cv_results(fold_histories)
             best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(avg_history)
             histories['best_training_accuracy'].append(best_training_accuracy)
             histories['best_dev_accuracy'].append(best_dev_accuracy)
             histories['best_epoch'].append(best_epoch)
             histories['history'].append(avg_history)
 
+        # Get best parameter value
+        best_dev_config = np.argmin(np.array(histories['best_dev_accuracy']))
+        best_param = histories['params'][best_dev_config]
+
+        # Retrain
+        print("Retraining now...")
+        print("The best parameter is {}....".format(best_param))
+
+        # We are ready to retrain
+        history = train_perceptron(X_train, Y_train, 
+                                   X_test, Y_test, **cv_args, d=best_param, cm=True)
+        
+        # Get retraining results
+        best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(history)
+        
+        # Update the results
+        histories['best_training_accuracy'] = [best_training_accuracy]
+        histories['best_dev_accuracy'] = [best_dev_accuracy]
+        histories['best_epoch'] = [best_epoch]
+        histories['params'] = best_param
+        histories['history'] = [history]
+        
+        # Append the results
         results.append(histories)
 
-    helpers.get_experiment_results(results, '3_2')
+    # Save the results
+    helpers.save_results(results, '3_2')
+    helpers.save_experiment_results(results, '3_2')
 
     return(results)
 

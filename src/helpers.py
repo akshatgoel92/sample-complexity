@@ -259,14 +259,6 @@ def get_signs(Y_hat, Y):
     return(signs)
 
 
-def save_results(results, question_no):
-    '''
-    Save results according to question no.
-    '''
-    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'wb') as f:
-        pickle.dump(results, f)
-
-
 def open_results(question_no):
     '''
     Save results according to question no.
@@ -290,7 +282,17 @@ def sigmoid_derivative():
     pass
 
 
-def get_experiment_results(results, question_no):
+
+def save_results(results, question_no):
+    '''
+    Save results according to question no.
+    '''
+    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'wb') as f:
+        pickle.dump(results, f)
+
+
+
+def save_experiment_results(results, question_no):
 
     train_acc = []
     test_acc = []
@@ -311,6 +313,7 @@ def get_experiment_results(results, question_no):
 
     results_df.to_csv(os.path.join("results", "Table_{}.csv".format(question_no)))
 
+    # Print out results each time
     print(results_df)
 
     return(results_df)
