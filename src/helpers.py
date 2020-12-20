@@ -309,7 +309,7 @@ def get_experiment_results(results, question_no):
     results_df = pd.DataFrame([train_acc, train_std, test_acc, test_std], columns = [params], 
                         index = ['Train Loss', 'Train SD', 'Test Loss',  'Test SD'])
 
-    results_df.to_csv(os.path.join("results", "Table_{}".format(question_no)))
+    results_df.to_csv(os.path.join("results", "Table_{}.csv".format(question_no)))
 
     return(results_df)
 

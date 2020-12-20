@@ -213,7 +213,7 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
         # Store results
         results.append(histories)
     
-    helpers.save_results(results, '3_1')
+    helpers.get_experiment_results(results, '3_1')
     
     return(histories)
 
