@@ -4,3 +4,4 @@ data/
 src/__pycache_
 .DS_Store
 src/__pycache__
+results/
