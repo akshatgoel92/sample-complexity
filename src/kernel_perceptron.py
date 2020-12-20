@@ -219,79 +219,76 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
 
 
 
-def run_k_fold_cross_val(epochs, data_path, name, kernel_type, 
-                         d, n_classes, k):
-    '''
-    --------------------------------------
-    Execute the training steps above and generate
-    the results that have been specified in the report.
-    --------------------------------------
-    '''
-    # Prepare data for the perceptron
-    X, Y = helpers.load_data(data_path, name)
-    
-    # Shuffle the dataset before splitting it
-    X, Y = helpers.shuffle_data(X, Y)
-    
-    # Split the data into training and validation set 
-    X_folds, Y_folds = helpers.get_k_folds(X, Y, k)
-    
-    # Initiate histories object
-    histories = []
-    
-    # Now go through each fold : every fold becomes the hold-out set at least once
-    for fold_no in range(k):
-        
-        # Put in the x-values
-        X_train = np.concatenate(X_folds[:fold_no] + X_folds[fold_no+1:])
-        X_val = X_folds[fold_no]
-        
-        # Put in the Y values
-        Y_train = np.concatenate(Y_folds[:fold_no] + Y_folds[fold_no+1:])
-        Y_val =  Y_folds[fold_no]
-        
-        # Call the perceptron training with the given epochs
-        history = train_perceptron(X_train, Y_train, 
-                                   X_val, Y_val, epochs,
-                                   kernel_type, d, n_classes)
-        
-        # Append to the histories file the epoch by epoch record of each fold
-        histories.append(history)
-    
-    # Get avg. accuracies by epoch across folds
-    avg_history = helpers.get_avg_results(histories)
-    
-    # Return best epoch according to dev. accuracy and the associated accuracies on both datasets
-    best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(avg_history)
-        
-    # Return statement
-    return(avg_history, best_epoch, best_training_accuracy, best_dev_accuracy)
-
-
-
-def run_grid_search(params, kwargs):
+def run_multiple_cv(params, data_args, kwargs):
     '''
     --------------------------------------
     Check which kernel parameter results
     in highest validation accuracy
     --------------------------------------
     '''
-    get_histories = {
-        
-            'params': params, 
-            'best_epoch': [],
-            'best_training_accuracy': [],
-            'best_dev_accuracy': [],
-    }
+    results = []
     
     for param in params: 
-        _, best_epoch, best_training_accuracy, best_dev_accuracy = run_k_fold_cross_val(d=param, **kwargs)
-        histories['best_epoch'].append(best_epoch)
-        histories['best_training_accuracy'].append(best_training_accuracy)
-        histories['best_dev_accuracy'].append(best_dev_accuracy)
+
+        histories = {
+        
+        'params': param, 
+        'history': [],
+        'best_epoch': [],
+        'best_training_accuracy': [],
+        'best_dev_accuracy': [],
+        }
+
+        for run in range(total_runs):
+            
+            # Prepare data for the perceptron
+            X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
     
+            # Shuffle the dataset before splitting it
+            X, Y = helpers.shuffle_data(X, Y)
+
+            # Split the data
+            X_train, X_test, Y_train, Y_test = helpers.split_data(X, Y, data_args['train_percent'])
+            Y_train = Y_train.astype(int)
+            Y_test = Y_test.astype(int)
     
-    return(histories)
+            # Split the data into training and validation set 
+            X_folds, Y_folds = helpers.get_k_folds(X_train, Y_train, data_args['k'])
+    
+            # Initiate histories object
+            run_histories = []
+    
+            # Now go through each fold : every fold becomes the hold-out set at least once
+            for fold_no in range(data_args['k']):
+        
+                # Put in the x-values
+                X_train = np.concatenate(X_folds[:fold_no] + X_folds[fold_no+1:])
+                X_val = X_folds[fold_no]
+        
+                # Put in the Y values
+                Y_train = np.concatenate(Y_folds[:fold_no] + Y_folds[fold_no+1:])
+                Y_val =  Y_folds[fold_no]
+        
+                # Call the perceptron training with the given epochs
+                history = train_perceptron(X_train, Y_train, 
+                                           X_val, Y_val, **cv_args, d=param)
+        
+                # Append to the histories file the epoch by epoch record of each fold
+                run_histories.append(history)
+            
+            # Get avg. accuracies by epoch across folds
+            avg_history = helpers.get_cv_results(run_histories)
+            best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(avg_history)
+            histories['best_training_accuracy'].append(best_training_accuracy)
+            histories['best_dev_accuracy'].append(best_dev_accuracy)
+            histories['best_epoch'].append(best_epoch)
+            histories['history'].append(avg_history)
+
+        results.append(histories)
+
+    helpers.get_experiment_results(results, '3_2')
+
+    return(results)
 
 
 
@@ -300,9 +297,9 @@ if __name__ == '__main__':
     # Set random seed
     np.random.seed(13290138)
 
-    run_test = 1
-    run_mul = 1
-    run_cv = 0
+    run_test = 0
+    run_mul = 0
+    run_cv = 1
 
     # How many runs to do for each hyper-parameter value?
     total_runs = 2
@@ -324,7 +321,8 @@ if __name__ == '__main__':
 
         'data_path': 'data',
         'name': 'zipcombo.dat', 
-        'train_percent': 0.8
+        'train_percent': 0.8,
+        'k': 5
 
     }
 
@@ -339,12 +337,11 @@ if __name__ == '__main__':
 
 
     # Search for the best parameters with the polynomial kernel
-    grid_search_args = {
+    cv_args = {
     
         'epochs': 4,
-        'kernel_type': 'gaussian', 
-        'n_classes': 10,
-        'k': 5
+        'kernel_type': 'polynomial', 
+        'n_classes': 10
     
     }
 
@@ -355,8 +352,8 @@ if __name__ == '__main__':
 
     if run_mul == 1:
         # Call training function multiple runs
-        multiple_histories = run_multiple(params, data_args, multiple_run_args, total_runs)
+        run_multiple(params, data_args, multiple_run_args, total_runs)
 
     if run_cv == 1:
         # Call training function with k-fold cross validation
-        cross_val_histories = run_grid_search(params, grid_search_args)
+        run_multiple_cv(params, data_args, cv_args)

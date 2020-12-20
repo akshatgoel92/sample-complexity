@@ -311,10 +311,12 @@ def get_experiment_results(results, question_no):
 
     results_df.to_csv(os.path.join("results", "Table_{}.csv".format(question_no)))
 
+    print(results_df)
+
     return(results_df)
 
 
-def get_avg_results(histories, k = 5):
+def get_cv_results(histories, k = 5):
     '''
     --------------------------------
     This function takes in a 
@@ -326,7 +328,7 @@ def get_avg_results(histories, k = 5):
     every epoch across folds.
     --------------------------------
     '''
-    avg_history = { }
+    avg_history = {}
     avg_history['train_accuracies'] = np.mean(np.array([history['train_accuracies'] for history in histories]), axis = 0)
     avg_history['val_accuracies'] = np.mean(np.array([history['val_accuracies'] for history in histories]), axis = 0)
 
