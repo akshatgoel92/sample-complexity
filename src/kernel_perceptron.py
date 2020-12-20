@@ -1,5 +1,6 @@
 # Import packages
 import os
+import pickle
 import helpers
 import numpy as np 
 import matplotlib.pyplot as plt
@@ -17,7 +18,9 @@ import matplotlib.pyplot as plt
 
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
-                     kernel_type, d, n_classes, cf = False):
+                     kernel_type, d, n_classes, 
+                     cf = False, fit_type = 'one_vs_all', 
+                     convergence_epochs=10):
     '''
     --------------------------------------
     This is the main training loop for
@@ -34,25 +37,25 @@ def train_perceptron(X_train, Y_train,
 
     # Store minimum loss for convergence check
     max_accuracy = 0
-    counter = 0
+    convergence_counter = 0
     
     # Transform X according to the user specified kernel
     # Can be either polynomial kernel or Gaussian kernel
     # Do this for both training and validation set
     if kernel_type == 'polynomial':
-        
-        print("Using polynomial kernel...")
         K_train = helpers.get_polynomial_kernel(X_train, X_train, d)
         K_val = helpers.get_polynomial_kernel(X_train, X_val, d)
     
     elif kernel_type == 'gaussian':
-
-        print("Using normal kernel...")
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
     # Store encoding
-    Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
+    # Can be encoding according to one vs all or all pairs
+    if fit_type == 'one_vs_all':
+        Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
+    elif fit_type == 'all_pairs':
+        Y_encoding = helpers.get_all_pairs_encoding(Y_train, n_classes)
     
     # Initialize alpha weights and store 
     # the number of samples
@@ -62,7 +65,7 @@ def train_perceptron(X_train, Y_train,
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
-        if counter >=10:
+        if convergence_counter >= convergence_epochs:
             break
         
         # Print the epoch number to track progress
@@ -92,7 +95,7 @@ def train_perceptron(X_train, Y_train,
         if helpers.has_improved(max_accuracy, val_accuracy):
             max_accuracy = val_accuracy
         else:
-            counter +=1
+            convergence_counter +=1
         
         # We append to the history dictionary as a record
         history['train_accuracies'].append(train_accuracy)
@@ -132,7 +135,6 @@ def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     # If it is not correct then we update the weights and biases in the direction of the label
     --------------------------------------
     '''
-
     Y = Y[i]
     signs = helpers.get_signs(Y_hat, Y)
     wrong = (Y*Y_hat <= 0)
@@ -165,34 +167,56 @@ def run_test_case(epochs, kernel_type, d, n_classes):
 
 
 
-def run_training(epochs, data_path, name, 
-                 kernel_type, d, n_classes, 
-                 train_percent):
+def run_multiple(params, data_args, kwargs, total_runs=5):
     '''
     --------------------------------------
-    Execute the training steps above and generate
-    the results that have been specified in the report.
+    Run multiple runs of kernel 
+    perceptron training with a given 
+    set of parameters
     --------------------------------------
     '''
-    # Prepare data for the perceptron
-    X, Y = helpers.load_data(data_path, name)
+    results = []
     
-    # Shuffle the dataset before splitting it
-    X, Y = helpers.shuffle_data(X, Y)
-    
-    # Split the data into training and validation set 
-    X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, train_percent)
+    for param in params:
 
-    # Call the perceptron training with the given epochs
-    history = train_perceptron(X_train, Y_train, 
-                                      X_val, Y_val, epochs,
-                                      kernel_type, d, n_classes)
+        histories = {
+        
+        'params': param, 
+        'history': [],
+        'best_epoch': [],
+        'best_training_accuracy': [],
+        'best_dev_accuracy': [],
+        }
+        
+        for run in range(total_runs):
+            # Prepare data for the perceptron
+            # Shuffle the dataset before splitting it
+            # Split the data into training and validation set 
+            X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
+            X, Y = helpers.shuffle_data(X, Y)
+            
+            X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, data_args['train_percent'])
+            Y_train = Y_train.astype(int)
+            Y_val = Y_val.astype(int)
+
+            # Call the perceptron training with the given epochs
+            # Return best epoch according to dev. accuracy and the associated accuracies on both datasets
+            history = train_perceptron(X_train, Y_train, X_val, Y_val, **kwargs, d=param)
+            best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(history)
+            
+            # Store results
+            histories['best_training_accuracy'].append(best_training_accuracy)
+            histories['best_dev_accuracy'].append(best_dev_accuracy)
+            histories['best_epoch'].append(best_epoch)
+            histories['history'].append(history)
+        
+        # Store results
+        results.append(histories)
     
-    # Return best epoch according to dev. accuracy and the associated accuracies on both datasets
-    best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(history)
+    helpers.save_results(results, '3_1')
     
-    # Return statement
-    return(history, best_epoch, best_training_accuracy, best_dev_accuracy)
+    return(histories)
+
 
 
 def run_k_fold_cross_val(epochs, data_path, name, kernel_type, 
@@ -244,33 +268,6 @@ def run_k_fold_cross_val(epochs, data_path, name, kernel_type,
     return(avg_history, best_epoch, best_training_accuracy, best_dev_accuracy)
 
 
-def run_multiple(params, kwargs):
-    '''
-    --------------------------------------
-    Run multiple runs of kernel 
-    perceptron training with a given 
-    set of parameters
-    --------------------------------------
-    '''
-    histories = {
-        
-        'params': params, 
-        'history': [],
-        'best_epoch': [],
-        'best_training_accuracy': [],
-        'best_dev_accuracy': [],
-    }
-    
-    for param in params:
-        history, best_epoch, best_training_accuracy, best_dev_accuracy = run_training(**kwargs, d=param)
-        histories['history'].append(history)
-        histories['best_epoch'].append(best_epoch)
-        histories['best_training_accuracy'].append(best_training_accuracy)
-        histories['best_dev_accuracy'].append(best_dev_accuracy)
-    
-    return(histories)
-
-
 
 def run_grid_search(params, kwargs):
     '''
@@ -304,8 +301,11 @@ if __name__ == '__main__':
     np.random.seed(13290138)
 
     run_test = 1
-    run_multiple = 0
-    run_cross_val = 0
+    run_mul = 1
+    run_cv = 0
+
+    # How many runs to do for each hyper-parameter value?
+    total_runs = 2
 
     # Store test arguments
     test_args = {
@@ -317,41 +317,46 @@ if __name__ == '__main__':
 
     }
 
+    # Store kernel parameter list to iterate over
+    params = [1, 2]
+
+    data_args = {
+
+        'data_path': 'data',
+        'name': 'zipcombo.dat', 
+        'train_percent': 0.8
+
+    }
+
     # Store arguments for this
     multiple_run_args = {
     
-        'epochs': 100, 
-        'data_path': 'data', 
-        'name': 'zipcombo.dat', 
-        'kernel_type': 'gaussian', 
+        'epochs': 5, 
+        'kernel_type': 'polynomial', 
         'n_classes': 10,
-        'train_percent': 0.8   
+        'convergence_epochs': 3   
     }
 
 
     # Search for the best parameters with the polynomial kernel
     grid_search_args = {
     
-        'epochs': 4, 
-        'data_path': 'data', 
-        'name': 'zipcombo.dat', 
+        'epochs': 4,
         'kernel_type': 'gaussian', 
         'n_classes': 10,
         'k': 5
     
     }
 
-    # Store kernel parameter list to iterate over
-    params = [1, 2, 3, 4, 5, 6, 7]
 
     if run_test == 1:
         # Call test function
         history = run_test_case(**test_args)
 
-    if run_multiple == 1:
+    if run_mul == 1:
         # Call training function multiple runs
-        multiple_histories = run_multiple(params, multiple_run_args)
+        multiple_histories = run_multiple(params, data_args, multiple_run_args, total_runs)
 
-    if run_cross_val == 1:
+    if run_cv == 1:
         # Call training function with k-fold cross validation
         cross_val_histories = run_grid_search(params, grid_search_args)

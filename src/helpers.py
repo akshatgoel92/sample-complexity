@@ -1,17 +1,21 @@
 # Import packages
 import os
-import numpy as np 
+import pickle
+import numpy as np
+import pandas as pd 
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist, pdist, squareform
 
 
 def load_data(path, name):
     '''
+    --------------------------------
     Takes in a folder path
     and dataset name and loads
     the corresponding dataset
     divided into features X
     and labels Y as numpy arrays.
+    --------------------------------
     '''
     data = np.loadtxt(os.path.join(path, name))
     X, Y = data[:, 1:], data[:, 0]
@@ -153,6 +157,27 @@ def get_confusion_matrix(target, pred):
     return(cf)
 
 
+def get_loss_plot(results, lab, run_no, param):
+  '''
+  Convenience function to plot results
+  '''
+  # Store model name and destination path
+  model_name = str(run_no) + '_' + str(param) + '_results.png'
+  path = os.path.join('figs', model_name)
+  
+  # Plot the results
+  plt.plot(results['train_' + lab], label='Train')
+  plt.plot(results['val_' + lab], label='Validation')
+  
+  # Add annotations
+  plt.legend()
+  plt.title(lab.title() + ' by Epoch')
+  
+  # Save the figure and close the plot
+  plt.savefig(path)
+  plt.clf()
+
+
 def get_best_results(history):
     '''
     This function takes in a 
@@ -170,34 +195,6 @@ def get_best_results(history):
     best_dev_accuracy = history['val_accuracies'][best_epoch]
 
     return(best_epoch, best_training_accuracy, best_dev_accuracy)
-
-
-def sigmoid(x):
-    '''
-    Calculates sigmoid activation value at x.
-    '''
-    return 1/(1+np.exp(-x))
-
-
-def sigmoid_derivate():
-    pass
-
-
-def get_avg_results(histories, k = 5):
-    '''
-    This function takes in a 
-    list of history dictionaries
-    where the list is of length k. 
-    k is the no. of folds we have
-    used in cross-validation. This
-    will return the mean value at
-    every epoch across folds.
-    '''
-    avg_history = { }
-    avg_history['train_accuracies'] = np.mean(np.array([history['train_accuracies'] for history in histories]), axis = 0)
-    avg_history['val_accuracies'] = np.mean(np.array([history['val_accuracies'] for history in histories]), axis = 0)
-
-    return(avg_history)
 
 
 def has_improved(max_accuracy, curr_accuracy):
@@ -260,8 +257,77 @@ def get_signs(Y_hat, Y):
     signs[Y == 0] = 0
 
     return(signs)
+
+
+def save_results(results, question_no):
+    '''
+    Save results according to question no.
+    '''
+    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'wb') as f:
+        pickle.dump(results, f)
+
+
+def open_results(question_no):
+    '''
+    Save results according to question no.
+    '''
+    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'rb') as f:
+        results = pickle.load(f)
+
+    return(results)
+
+
+def sigmoid(x):
+    '''
+    --------------------------------
+    Calculates sigmoid activation value at x.
+    --------------------------------
+    '''
+    return 1/(1+np.exp(-x))
+
+
+def sigmoid_derivative():
+    pass
+
+
+def get_experiment_results(results, question_no):
+
+    train_acc = []
+    test_acc = []
+    train_std = []
+    test_std = []
+    params = []
+
+    for result in results:
+        params.append(result['params'])
+        train_acc.append(np.mean(np.array(result['best_training_accuracy'])))
+        test_acc.append(np.mean(np.array(result['best_dev_accuracy'])))
+        train_std.append(np.std(np.array(result['best_training_accuracy'])))
+        test_std.append(np.std(np.array(result['best_dev_accuracy'])))
+
     
+    results_df = pd.DataFrame([train_acc, train_std, test_acc, test_std], columns = [params], 
+                        index = ['Train Loss', 'Train SD', 'Test Loss',  'Test SD'])
+
+    results_df.to_csv(os.path.join("results", "Table_{}".format(question_no)))
+
+    return(results_df)
 
 
+def get_avg_results(histories, k = 5):
+    '''
+    --------------------------------
+    This function takes in a 
+    list of history dictionaries
+    where the list is of length k. 
+    k is the no. of folds we have
+    used in cross-validation. This
+    will return the mean value at
+    every epoch across folds.
+    --------------------------------
+    '''
+    avg_history = { }
+    avg_history['train_accuracies'] = np.mean(np.array([history['train_accuracies'] for history in histories]), axis = 0)
+    avg_history['val_accuracies'] = np.mean(np.array([history['val_accuracies'] for history in histories]), axis = 0)
 
-
+    return(avg_history)
