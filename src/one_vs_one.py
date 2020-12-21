@@ -4,11 +4,11 @@ def one_vs_one(X_train, Y_train, X_test):
   Output:
   '''
 
-  n = len(training_data)
+  n_samples = len(X_train)
   
   predictions = np.array([np.empty(n)])
   
-  votes = np.zeros((10, len(test_data)))
+  votes = np.zeros((n_classes, len(test_data)))
   
   for i in range(3):
     for j in range(i+1, 3):

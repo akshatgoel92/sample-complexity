@@ -70,11 +70,16 @@ def train_perceptron(X_train, Y_train,
     if sparse_setting == 1:
         alpha = sparse.csc_matrix(alpha)
 
+
+
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
         if convergence_counter >=convergence_epochs:
             break
+
+        # Count mistakes
+        mistakes = 0
         
         # Do this for each example in the dataset
         for i in range(n_samples):
@@ -83,7 +88,10 @@ def train_perceptron(X_train, Y_train,
             # dim(K_train[i, :]) ---> (6199, 1) 
             # ====> dim(y_hat) --> 10 X 1
             # Perform update
-            Y_hat, _ = get_predictions(alpha, K_train[i, :])
+            Y_hat, y_pred = get_predictions(alpha, K_train[i, :])
+            mistakes += (y_pred == Y_train[i]).astype(int)
+
+            
             if sparse_setting == 1:
                 alpha = get_sparse_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding)
             else:
@@ -92,9 +100,8 @@ def train_perceptron(X_train, Y_train,
         # We finally compute predictions and accuracy at the end of each epoch
         # It is a mistake if the class with the highest predicted value does not equal the true label
         # mistakes += int((np.argmax(Y_hat) + 1) != int(Y_train[i]))
-        Y_hat_train, preds_train = get_predictions(alpha, K_train)
-        train_accuracy = helpers.get_accuracy(Y_train, preds_train)
-            
+        # Store train accuracy
+        train_accuracy = mistakes/n_samples
         # Now we compute validation predictions
         Y_hat_val, preds_val = get_predictions(alpha, K_val)
         val_accuracy = helpers.get_accuracy(Y_val, preds_val)
@@ -111,7 +118,7 @@ def train_perceptron(X_train, Y_train,
         # We append to the history dictionary as a record
         history['train_accuracies'].append(train_accuracy)
         history['val_accuracies'].append(val_accuracy)
-        history['preds_train'].append(preds_train)
+        # history['preds_train'].append(preds_train)
         history['preds_val'].append(preds_val)
 
         
@@ -177,7 +184,7 @@ def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     
     if np.sum(wrong) > 0:
         alpha[wrong, i] -= signs[wrong]
-    
+
     return(alpha)
 
 
@@ -419,7 +426,7 @@ if __name__ == '__main__':
         'n_classes': 10,
         'tolerance': 0.000001,
         'convergence_epochs': 5,
-        'sparse_setting': 1
+        'sparse_setting': 0
     }
 
 
