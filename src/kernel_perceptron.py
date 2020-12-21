@@ -64,7 +64,7 @@ def train_perceptron(X_train, Y_train,
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
-    alpha = np.zeros((n_classes, K_train.shape[0]))
+    alpha = sparse.csc_matrix(np.zeros((n_classes, K_train.shape[0])))
     active = [np.array([], dtype=int) for row in range(alpha.shape[0])]
     n_samples = np.max(Y_train.shape)
 
@@ -143,10 +143,11 @@ def get_update(Y_train, Y_hat, alpha, n_classes, i, Y, active):
     signs[Y_hat <= 0] = -1
     signs[Y == 0] = 0
     wrong = (Y*Y_hat <= 0)
+    print(signs[wrong].shape)
     # wrong_indices = [i for i, result in enumerate(wrong) if result == True]
 
     if np.sum(wrong) > 0:
-        alpha[wrong, i] -= signs[wrong]
+        alpha[wrong, i] -= sparse.csc_matrix(signs[wrong].reshape(-1,1))
         # active = [np.append(active[wrong_index], i) for wrong_index in wrong_indices]
     
     return(alpha)
