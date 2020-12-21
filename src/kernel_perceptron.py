@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
                      kernel_type, d, n_classes, 
-                     tolerance=0.00001, convergence_epochs=5):
+                     tolerance=0.00001, convergence_epochs=5, sparse_setting=0):
     '''
     --------------------------------------
     This is the main training loop for
@@ -64,18 +64,17 @@ def train_perceptron(X_train, Y_train,
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
-    alpha = sparse.csc_matrix(np.zeros((n_classes, K_train.shape[0])))
-    active = [np.array([], dtype=int) for row in range(alpha.shape[0])]
+    alpha = np.zeros((n_classes, K_train.shape[0]))
     n_samples = np.max(Y_train.shape)
+
+    if sparse_setting == 1:
+        alpha = sparse.csc_matrix(alpha)
 
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
         if convergence_counter >=convergence_epochs:
             break
-        
-        # Print the epoch number to track progress
-        print('This is epoch number: {}'.format(epoch))
         
         # Do this for each example in the dataset
         for i in range(n_samples):
@@ -85,8 +84,10 @@ def train_perceptron(X_train, Y_train,
             # ====> dim(y_hat) --> 10 X 1
             # Perform update
             Y_hat, _ = get_predictions(alpha, K_train[i, :])
-            # Y_hat, _ = get_sparse_predictions(alpha, K_train[i, :], active)
-            alpha = get_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding, active)
+            if sparse_setting == 1:
+                alpha = get_sparse_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding)
+            else:
+                alpha = get_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding)
 
         # We finally compute predictions and accuracy at the end of each epoch
         # It is a mistake if the class with the highest predicted value does not equal the true label
@@ -122,7 +123,7 @@ def train_perceptron(X_train, Y_train,
     return(history)
 
 
-def get_update(Y_train, Y_hat, alpha, n_classes, i, Y, active):
+def get_sparse_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     '''
     --------------------------------------
     Returns raw predictions and class predictions
@@ -142,30 +143,44 @@ def get_update(Y_train, Y_hat, alpha, n_classes, i, Y, active):
     signs = np.ones(Y_hat.shape)
     signs[Y_hat <= 0] = -1
     signs[Y == 0] = 0
-    wrong = (Y*Y_hat <= 0)
-    print(signs[wrong].shape)
-    # wrong_indices = [i for i, result in enumerate(wrong) if result == True]
+    wrong = (Y*Y_hat <= 0).astype(int)
 
+    # Make the update if any of the classifiers are wrong
     if np.sum(wrong) > 0:
-        alpha[wrong, i] -= sparse.csc_matrix(signs[wrong].reshape(-1,1))
-        # active = [np.append(active[wrong_index], i) for wrong_index in wrong_indices]
+        alpha = alpha.tolil()
+        alpha[:, i] -= (signs*wrong).reshape(alpha[:, i].shape)
+        alpha = alpha.tocsc()
     
     return(alpha)
 
 
-def get_sparse_predictions(alpha, K_examples, active):
+def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     '''
     --------------------------------------
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
+
+    # Now first make a matrix Y with dim(Y) ---> (n_classes,) which is only filled with -1
+    # Then get the label from the Y_train matrix
+    # If this label is 6 then we want to change the 6th index to 1
+    # Y = get_one_hot_encoding(n_classes, Y_train, i)
+    # Compute sign of predictions and store indices to update        
+    # Check if the prediction is correct against the labels
+    # If it is correct we don't need to make any updates: we just move to the next iteration
+    # If it is not correct then we update the weights and biases in the direction of the label
     --------------------------------------
     '''
-    Y_hat = [alpha[class_no][is_active] @ K_examples[is_active] for class_no, is_active in enumerate(active)]
-    Y_hat = np.array(Y_hat).reshape(alpha.shape[0], )
-    preds = np.argmax(Y_hat, axis = 0)
-
-    return(Y_hat, preds)
+    Y = Y[i]
+    signs = np.ones(Y_hat.shape)
+    signs[Y_hat <= 0] = -1
+    wrong = (Y*Y_hat <= 0)
     
+    if np.sum(wrong) > 0:
+        alpha[wrong, i] -= signs[wrong]
+    
+    return(alpha)
+
+
 def get_predictions(alpha, K_examples):
     '''
     --------------------------------------
@@ -181,7 +196,7 @@ def get_predictions(alpha, K_examples):
     return(Y_hat, preds)
 
 
-def run_test_case(epochs, kernel_type, d, n_classes):
+def run_test_case(epochs, kernel_type, d, n_classes, tolerance, sparse_setting):
     '''
     --------------------------------------
     Execute the training steps above and generate
@@ -198,7 +213,7 @@ def run_test_case(epochs, kernel_type, d, n_classes):
     Y_val = Y_val.astype(int)
 
     history = train_perceptron(X_train, Y_train, X_val, Y_val, epochs, 
-                               kernel_type, d, n_classes)
+                               kernel_type, d, n_classes, tolerance)
 
     return(history)
 
@@ -213,6 +228,7 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
     --------------------------------------
     '''
     results = []
+    overall_run_no = 0
     
     for param in params:
 
@@ -246,6 +262,9 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
             histories['best_dev_accuracy'].append(best_dev_accuracy)
             histories['best_epoch'].append(best_epoch)
             histories['history'].append(history)
+
+            overall_run_no += 1
+            print("This is overall run no {}".format(overall_run_no))
         
         # Store results
         results.append(histories)
@@ -361,8 +380,8 @@ if __name__ == '__main__':
 
     # Generic message for elapsed time used later
     time_msg = "Elapsed time is....{} minutes"
-    run_test = 0
-    run_mul = 1
+    run_test = 1
+    run_mul = 0
     run_cv = 0
 
     # How many runs to do for each hyper-parameter value?
@@ -375,7 +394,8 @@ if __name__ == '__main__':
     'n_classes': 3,
     'epochs':20,
     'd':3,
-    'tolerance': 0.0001
+    'tolerance': 0.0001,
+    'sparse_setting': 0
 
     }
 
@@ -387,7 +407,7 @@ if __name__ == '__main__':
         'data_path': 'data',
         'name': 'zipcombo.dat', 
         'train_percent': 0.8,
-        'k': 5
+        'k': 5,
 
     }
 
@@ -398,7 +418,8 @@ if __name__ == '__main__':
         'kernel_type': 'polynomial', 
         'n_classes': 10,
         'tolerance': 0.000001,
-        'convergence_epochs': 5   
+        'convergence_epochs': 5,
+        'sparse_setting': 1
     }
 
 
@@ -409,7 +430,8 @@ if __name__ == '__main__':
         'kernel_type': 'polynomial', 
         'n_classes': 10, 
         'tolerance':0.000001,
-        'convergence_epochs': 5
+        'convergence_epochs': 5, 
+        'sparse_setting': 0
     
     }
 

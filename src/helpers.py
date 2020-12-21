@@ -211,33 +211,6 @@ def get_one_vs_all_encoding(Y_train, n_classes):
     return(Y)
 
 
-def get_all_pairs_encoding(n_classes, Y_train, i):
-    '''
-    --------------------
-    Return the encoding matrix for
-    all pairs multi-class kernel perceptron
-    --------------------
-    '''
-    pass
-
-
-
-
-
-def sigmoid(x):
-    '''
-    --------------------------------
-    Calculates sigmoid activation value at x.
-    --------------------------------
-    '''
-    return 1/(1+np.exp(-x))
-
-
-def sigmoid_derivative():
-    pass
-
-
-
 def save_results(results, question_no):
     '''
     Save results according to question no.
@@ -314,3 +287,16 @@ def get_cv_results(histories, k = 5):
     avg_history['val_accuracies'] = np.mean(np.array([history['val_accuracies'] for history in histories]), axis = 0)
 
     return(avg_history)
+
+
+def sigmoid(x):
+    '''
+    --------------------------------
+    Calculates sigmoid activation value at x.
+    --------------------------------
+    '''
+    return 1/(1+np.exp(-x))
+
+
+def sigmoid_derivative():
+    pass
