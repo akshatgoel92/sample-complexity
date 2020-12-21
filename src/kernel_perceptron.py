@@ -1,8 +1,10 @@
 # Import packages
 import os
+import time
 import pickle
 import helpers
-import numpy as np 
+import numpy as np
+import scipy.sparse as sparse 
 import matplotlib.pyplot as plt
 
 # Checks to do:
@@ -25,8 +27,7 @@ import matplotlib.pyplot as plt
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
                      kernel_type, d, n_classes, 
-                     cm = False, fit_type = 'one_vs_all', 
-                     convergence_epochs=10):
+                     tolerance=0.00001, convergence_epochs=5):
     '''
     --------------------------------------
     This is the main training loop for
@@ -37,13 +38,20 @@ def train_perceptron(X_train, Y_train,
     history = {
         "train_accuracies": [],
         "val_accuracies": [],
-        "train_cf": [],
-        "val_cf": []
+        "preds_train": [],
+        "preds_val": []
     }
 
     # Store minimum loss for convergence check
-    max_accuracy = 0
+    prev_accuracy = 0
     convergence_counter = 0
+
+    # Initialize alpha weights and store 
+    # the number of samples
+
+
+    # Store encoding
+    Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
     
     # Transform X according to the user specified kernel
     # Can be either polynomial kernel or Gaussian kernel
@@ -56,76 +64,65 @@ def train_perceptron(X_train, Y_train,
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
-    # Store encoding
-    # Can be encoding according to one vs all or all pairs
-    if fit_type == 'one_vs_all':
-        Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
-    elif fit_type == 'all_pairs':
-        Y_encoding = helpers.get_all_pairs_encoding(Y_train, n_classes)
-    
-    # Initialize alpha weights and store 
-    # the number of samples
     alpha = np.zeros((n_classes, K_train.shape[0]))
+    active = [np.array([], dtype=int) for row in range(alpha.shape[0])]
     n_samples = np.max(Y_train.shape)
 
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
-        if convergence_counter >= convergence_epochs:
+        if convergence_counter >=convergence_epochs:
             break
         
         # Print the epoch number to track progress
         print('This is epoch number: {}'.format(epoch))
-
+        
         # Do this for each example in the dataset
         for i in range(n_samples):
             # Compute the prediction with the current weights:
             # dim(alpha) --> (10, 6199), 
             # dim(K_train[i, :]) ---> (6199, 1) 
             # ====> dim(y_hat) --> 10 X 1
-            Y_hat, _ = helpers.get_predictions(alpha, K_train[i, :])
-            
-            # Perform update by calling the function above
-            alpha = get_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding)
-            
+            # Perform update
+            Y_hat, _ = get_predictions(alpha, K_train[i, :])
+            # Y_hat, _ = get_sparse_predictions(alpha, K_train[i, :], active)
+            alpha = get_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding, active)
+
         # We finally compute predictions and accuracy at the end of each epoch
         # It is a mistake if the class with the highest predicted value does not equal the true label
         # mistakes += int((np.argmax(Y_hat) + 1) != int(Y_train[i]))
-        Y_hat_train, preds_train = helpers.get_predictions(alpha, K_train)
+        Y_hat_train, preds_train = get_predictions(alpha, K_train)
         train_accuracy = helpers.get_accuracy(Y_train, preds_train)
             
         # Now we compute validation predictions
-        Y_hat_val, preds_val = helpers.get_predictions(alpha, K_val)
+        Y_hat_val, preds_val = get_predictions(alpha, K_val)
         val_accuracy = helpers.get_accuracy(Y_val, preds_val)
 
-        if helpers.has_improved(max_accuracy, val_accuracy):
-            max_accuracy = val_accuracy
-        else:
-            convergence_counter +=1
+
+        # Convergence check
+        if train_accuracy - prev_accuracy < tolerance:
+            convergence_counter += 1
+
+        # Update the previous accuracy after checking convergence
+        prev_accuracy = train_accuracy
+            
         
         # We append to the history dictionary as a record
         history['train_accuracies'].append(train_accuracy)
         history['val_accuracies'].append(val_accuracy)
-
-        if cm: 
-        
-            # At the end of each epoch we get confusion matrices
-            train_cf = helpers.get_confusion_matrix(Y_train, preds_train)
-            val_cf = helpers.get_confusion_matrix(Y_val, preds_val)
-            history['train_cf'].append(train_cf)
-            history['val_cf'].append(val_cf)
+        history['preds_train'].append(preds_train)
+        history['preds_val'].append(preds_val)
 
         
         # We print the accuracies at the end of each epoch
-        msg = '{} accuracy on epoch {}: {}'
-        print(msg.format('Train', epoch, train_accuracy))
-        print(msg.format('Validation', epoch, val_accuracy))
+        msg = 'Train accuracy: {}, Validation accuracy: {}, Epoch: {}'
+        print(msg.format(train_accuracy, val_accuracy, epoch))
     
     # Return statement
     return(history)
 
 
-def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
+def get_update(Y_train, Y_hat, alpha, n_classes, i, Y, active):
     '''
     --------------------------------------
     Returns raw predictions and class predictions
@@ -142,12 +139,45 @@ def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
     --------------------------------------
     '''
     Y = Y[i]
-    signs = helpers.get_signs(Y_hat, Y)
+    signs = np.ones(Y_hat.shape)
+    signs[Y_hat <= 0] = -1
+    signs[Y == 0] = 0
     wrong = (Y*Y_hat <= 0)
-    alpha[wrong, i] -= (signs[wrong])
+    # wrong_indices = [i for i, result in enumerate(wrong) if result == True]
+
+    if np.sum(wrong) > 0:
+        alpha[wrong, i] -= signs[wrong]
+        # active = [np.append(active[wrong_index], i) for wrong_index in wrong_indices]
     
     return(alpha)
 
+
+def get_sparse_predictions(alpha, K_examples, active):
+    '''
+    --------------------------------------
+    Returns raw predictions and class predictions
+    given alpha weights and Gram matrix K_examples.
+    --------------------------------------
+    '''
+    Y_hat = [alpha[class_no][is_active] @ K_examples[is_active] for class_no, is_active in enumerate(active)]
+    Y_hat = np.array(Y_hat).reshape(alpha.shape[0], )
+    preds = np.argmax(Y_hat, axis = 0)
+
+    return(Y_hat, preds)
+    
+def get_predictions(alpha, K_examples):
+    '''
+    --------------------------------------
+    Returns raw predictions and class predictions
+    given alpha weights and Gram matrix K_examples.
+    --------------------------------------
+    '''
+    # Take the maximum argument in each column
+    Y_hat = alpha @ K_examples
+    preds = np.argmax(Y_hat, axis = 0)
+    
+    # Return statement
+    return(Y_hat, preds)
 
 
 def run_test_case(epochs, kernel_type, d, n_classes):
@@ -219,7 +249,7 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
         # Store results
         results.append(histories)
     
-    helpers.get_experiment_results(results, '3_1')
+    helpers.save_experiment_results(results, '3_1')
     
     return(histories)
 
@@ -295,10 +325,13 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
 
         # We are ready to retrain
         history = train_perceptron(X_train, Y_train, 
-                                   X_test, Y_test, **cv_args, d=best_param, cm=True)
+                                   X_test, Y_test, 
+                                   **cv_args, d=best_param)
         
         # Get retraining results
         best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(history)
+        preds_train = history['preds_train'][best_epoch]
+        preds_val = history['preds_val'][best_epoch]
         
         # Update the results
         histories['best_training_accuracy'] = [best_training_accuracy]
@@ -306,7 +339,9 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
         histories['best_epoch'] = [best_epoch]
         histories['params'] = best_param
         histories['history'] = [history]
-        
+        histories['train_cf'] = helpers.get_confusion_matrix(Y_train, preds_train)
+        histories['val_cf'] = helpers.get_confusion_matrix(Y_test, preds_val)
+
         # Append the results
         results.append(histories)
 
@@ -323,12 +358,14 @@ if __name__ == '__main__':
     # Set random seed
     np.random.seed(13290138)
 
+    # Generic message for elapsed time used later
+    time_msg = "Elapsed time is....{} minutes"
     run_test = 0
-    run_mul = 0
-    run_cv = 1
+    run_mul = 1
+    run_cv = 0
 
     # How many runs to do for each hyper-parameter value?
-    total_runs = 2
+    total_runs = 20
 
     # Store test arguments
     test_args = {
@@ -337,11 +374,12 @@ if __name__ == '__main__':
     'n_classes': 3,
     'epochs':20,
     'd':3,
+    'tolerance': 0.0001
 
     }
 
     # Store kernel parameter list to iterate over
-    params = [1, 2]
+    params = [1, 2, 3, 4, 5, 6, 7]
 
     data_args = {
 
@@ -355,10 +393,11 @@ if __name__ == '__main__':
     # Store arguments for this
     multiple_run_args = {
     
-        'epochs': 5, 
+        'epochs': 20, 
         'kernel_type': 'polynomial', 
         'n_classes': 10,
-        'convergence_epochs': 3   
+        'tolerance': 0.000001,
+        'convergence_epochs': 5   
     }
 
 
@@ -367,19 +406,21 @@ if __name__ == '__main__':
     
         'epochs': 4,
         'kernel_type': 'polynomial', 
-        'n_classes': 10
+        'n_classes': 10, 
+        'tolerance':0.000001,
+        'convergence_epochs': 5
     
     }
 
 
     if run_test == 1:
-        # Call test function
         history = run_test_case(**test_args)
 
     if run_mul == 1:
-        # Call training function multiple runs
+        start = time.time()
         run_multiple(params, data_args, multiple_run_args, total_runs)
+        elapsed = (time.time() - start)/60
+        print(time_msg.format(elapsed))
 
     if run_cv == 1:
-        # Call training function with k-fold cross validation
         run_multiple_cv(params, data_args, cv_args)

@@ -3,6 +3,7 @@ import os
 import pickle
 import numpy as np
 import pandas as pd 
+import scipy.sparse as sparse
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist, pdist, squareform
 
@@ -197,29 +198,6 @@ def get_best_results(history):
     return(best_epoch, best_training_accuracy, best_dev_accuracy)
 
 
-def has_improved(max_accuracy, curr_accuracy):
-    '''
-    --------------------------------------
-    Check to see whether there has been an improvement
-    ----
-    '''
-    return(curr_accuracy > max_accuracy)
-
-
-def get_predictions(alpha, K_examples):
-    '''
-    --------------------------------------
-    Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
-    --------------------------------------
-    '''
-    # Take the maximum argument in each column
-    Y_hat = alpha @ K_examples
-    preds = np.argmax(Y_hat, axis = 0)
-    
-    # Return statement
-    return(Y_hat, preds)
-
 
 def get_one_vs_all_encoding(Y_train, n_classes):
     '''
@@ -243,30 +221,7 @@ def get_all_pairs_encoding(n_classes, Y_train, i):
     pass
 
 
-def get_signs(Y_hat, Y):
-    '''
-    --------------------------------------
-    Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
-    # The 0 labels in the encoding matrix should not contribute
-    # to classification
-    --------------------------------------
-    '''
-    signs = np.ones(Y_hat.shape)
-    signs[Y_hat <= 0] = -1
-    signs[Y == 0] = 0
 
-    return(signs)
-
-
-def open_results(question_no):
-    '''
-    Save results according to question no.
-    '''
-    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'rb') as f:
-        results = pickle.load(f)
-
-    return(results)
 
 
 def sigmoid(x):
@@ -317,6 +272,29 @@ def save_experiment_results(results, question_no):
     print(results_df)
 
     return(results_df)
+
+
+def open_results(question_no):
+    '''
+    Save results according to question no.
+    '''
+    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'rb') as f:
+        results = pickle.load(f)
+
+    return(results)
+
+
+def compute_final_cf(n_classes):
+
+    results = open_results('3_2')
+
+    n_cf = len(results)
+    cf = np.zeros((n_classes, n_classes))
+
+    for result in results:
+        cf = np.add(cf, result['val_cf'])
+
+    return(cf)
 
 
 def get_cv_results(histories, k = 5):
