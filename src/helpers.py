@@ -152,25 +152,30 @@ def get_confusion_matrix(target, pred):
     # Look at the corresponding prediction
     # Update the corresponding cell in the confusion matrix
     for i in range(len(target)):
-        cf[int(target[i]) - 1, int(pred[i]) - 1] += 1
+        cf[int(target[i]), int(pred[i])] += 1
     
     # Return statement
     return(cf)
 
 
-def compute_final_cf(n_classes):
+def compute_final_cf(n_classes, question_no):
     '''
     Post-process the final CF into the format required by
     the question
     '''
-
-    results = open_results('3_2')
+    results = open_results(question_no)
 
     n_cf = len(results)
     cf = np.zeros((n_classes, n_classes))
 
     for result in results:
         cf = np.add(cf, result['val_cf'])
+
+    # fill_diagonal operates in place
+    np.fill_diagonal(cf, 0)
+
+    # Now normalize the matrix
+    cf = np.divide(a, np.sum(a, axis = 1))
 
     return(cf)
 
@@ -275,8 +280,6 @@ def open_results(question_no):
         results = pickle.load(f)
 
     return(results)
-
-
 
 
 

@@ -3,6 +3,7 @@ import os
 import time
 import pickle
 import helpers
+import argparse
 import numpy as np
 import scipy.sparse as sparse 
 import matplotlib.pyplot as plt
@@ -27,8 +28,9 @@ import matplotlib.pyplot as plt
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
                      kernel_type, d, n_classifiers, 
-                     tolerance=0.000001, convergence_epochs=5, 
-                     sparse_setting=0, max_epochs = 20, fit_type='one_vs_all', neg=1, pos=2):
+                     question_no, tolerance=0.000001,
+                     convergence_epochs=5, 
+                     fit_type='one_vs_all', neg=1, pos=2):
     '''
     --------------------------------------
     This is the main training loop for
@@ -47,28 +49,33 @@ def train_perceptron(X_train, Y_train,
     prev_loss = np.inf
     convergence_counter = 0
 
-    # Store encoding
+    # Encoding for one vs. all
     if fit_type == 'one_vs_all':
         Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classifiers)
     
+    # Encoding for one vs. one
     elif fit_type == 'one_vs_one': 
         Y_encoding = np.ones(len(Y_train), np.int32)
         Y_encoding[Y_train == neg] = -1
     
-    # Get kernel
+    # Get polynomial kernel
     if kernel_type == 'polynomial':
         K_train = helpers.get_polynomial_kernel(X_train, X_train, d)
         K_val = helpers.get_polynomial_kernel(X_train, X_val, d)
     
+    # Get Gaussian kernel
     elif kernel_type == 'gaussian':
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
-    # Initialize containers
+    # Initialize container for weights
     alpha = np.zeros((n_classifiers, K_train.shape[0]))
+
+    # Store the number of samples
     n_samples = np.max(Y_train.shape)
+
+    # Store the mistake tracker
     mistake_tracker = []
-    
     
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
@@ -83,7 +90,12 @@ def train_perceptron(X_train, Y_train,
         for i in range(n_samples):
 
             # Get predictions on the training set
-            Y_hat, y_pred, signs, wrong, mistake = get_train_predictions(alpha, K_train[i, :], Y_encoding[i], Y_train[i])
+            Y_hat, y_pred, signs, wrong, mistake = get_train_predictions(alpha, 
+                                                                         K_train[i, :], 
+                                                                         Y_encoding[i], 
+                                                                         Y_train[i], 
+                                                                         fit_type)
+            # Increment the mistake counter
             mistakes += mistake
             
             # Update classifiers even if a single one makes a mistake
@@ -91,10 +103,24 @@ def train_perceptron(X_train, Y_train,
                 mistake_tracker.append(i)
                 alpha[wrong, i] -= signs[wrong]
 
+        
+        # Get the training prediction with the updated weights
+        Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
+        train_loss = helpers.get_loss(Y_val, preds_val)
+
+        # Test the classifier
+        Y_hat_val, preds_val = get_final_predictions(alpha, K_val, fit_type)
+        val_loss = helpers.get_loss(Y_val, preds_val)
+
+        # Store testing results
+        history['train_loss'].append(train_loss)
+        history['preds_train'].append(preds_train)
+        history['val_loss'].append(val_loss)
+        history['preds_val'].append(preds_val)
+        
         # Update the mistake tracker
         mistake_tracker = list(set(mistake_tracker))
-        print(len(mistake_tracker))
-
+        
         # Results tracking
         train_loss = mistakes/n_samples
         history['train_loss'].append(train_loss)
@@ -110,19 +136,13 @@ def train_perceptron(X_train, Y_train,
         msg = 'Train loss: {}, Epoch: {}'
         print(msg.format(train_loss, epoch))
 
-    # Test the classifier
-    Y_hat_val, preds_val = get_val_predictions(alpha, K_val)
-    val_loss = helpers.get_loss(Y_val, preds_val)
-    
-    # Store testing results
-    history['val_loss'].append(val_loss)
-    history['preds_val'].append(preds_val)
+
     
     # Return statement
     return(history)
 
 
-def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type='one_vs_all'):
+def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type):
     '''
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
@@ -158,19 +178,25 @@ def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type='one_v
     return(Y_hat, preds, signs, wrong, mistake)
 
 
-def get_val_predictions(alpha, K_examples):
+def get_final_predictions(alpha, K_examples, fit_type):
     '''
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
     '''
     # Take the maximum argument in each column
     Y_hat = alpha @ K_examples
-    preds = np.argmax(Y_hat, axis = 0)
     
+    if fit_type == 'one_vs_all':
+        preds = np.argmax(Y_hat, axis = 0)
+
+    if fit_type == 'one_vs_one':
+        preds = np.sign(Y_hat)
+        preds[Y_hat == 0] = -1
+
     return(Y_hat, preds)
 
 
-def run_test_case(epochs, kernel_type, d, n_classifiers, tolerance, sparse_setting):
+def run_test_case(epochs, kernel_type, d, n_classifiers, tolerance):
     '''
     --------------------------------------
     Execute the training steps above and generate
@@ -193,7 +219,7 @@ def run_test_case(epochs, kernel_type, d, n_classifiers, tolerance, sparse_setti
 
 
 
-def run_multiple(params, data_args, kwargs, total_runs=5):
+def run_multiple(params, data_args, kwargs, total_runs, question_no):
     '''
     --------------------------------------
     Run multiple runs of kernel 
@@ -249,13 +275,13 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
         # Store results
         results.append(histories)
     
-    helpers.save_experiment_results(results, '3_1')
+    helpers.save_experiment_results(results, question_no)
     
     return(histories)
 
 
 
-def run_multiple_cv(params, data_args, kwargs, total_runs=2):
+def run_multiple_cv(params, data_args, kwargs, total_runs, question_no):
     '''
     --------------------------------------
     Check which kernel parameter results
@@ -263,7 +289,10 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
     --------------------------------------
     '''
     results = []
+    overall_run_no = 0
 
+    time_msg = "Elapsed time is....{} minutes"
+    start = time.time()
     
     for run in range(total_runs):
 
@@ -308,7 +337,8 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
         
                 # Call the perceptron training with the given epochs
                 history = train_perceptron(X_train_fold, Y_train_fold, 
-                                           X_val_fold, Y_val_fold, **cv_args, d=param)
+                                           X_val_fold, Y_val_fold, **cv_args, 
+                                           question_no=question_no, d=param)
         
                 # Append to the histories file the epoch by epoch record of each fold
                 fold_histories.append(history)
@@ -334,12 +364,12 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
         # We are ready to retrain
         history = train_perceptron(X_train, Y_train, 
                                    X_test, Y_test, 
-                                   **cv_args, d=best_param)
+                                   **cv_args, d=best_param, question_no=question_no)
         
         # Get retraining results
         best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(history)
         preds_train = history['preds_train'][best_epoch]
-        preds_val = history['preds_val'][best_epoch]
+        preds_test = history['preds_val'][best_epoch]
         
         # Update the results
         histories['best_training_loss'] = [best_training_loss]
@@ -348,14 +378,19 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
         histories['params'] = best_param
         histories['history'] = [history]
         histories['train_cf'] = helpers.get_confusion_matrix(Y_train, preds_train)
-        histories['val_cf'] = helpers.get_confusion_matrix(Y_test, preds_val)
+        histories['val_cf'] = helpers.get_confusion_matrix(Y_test, preds_test)
+
+        overall_run_no += 1
+        print("This is overall run no {}".format(overall_run_no))
+        elapsed = (time.time() - start)/60
+        print(time_msg.format(elapsed))
 
         # Append the results
         results.append(histories)
 
     # Save the results
-    helpers.save_results(results, '3_2')
-    helpers.save_experiment_results(results, '3_2')
+    helpers.save_results(results, question_no)
+    helpers.save_experiment_results(results, question_no)
 
     return(results)
 
@@ -363,16 +398,41 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
 
 if __name__ == '__main__':
 
+
+    parser = argparse.ArgumentParser(description='List the content of a folder')
+    
+    parser.add_argument('run_test',
+                        type=int, 
+                        help='Whether to run the test....')
+    
+    parser.add_argument('run_mul',
+                         type=int, 
+                         help='Where to run multiple runs...')
+
+    parser.add_argument('run_cv',
+                         type=int, 
+                         help='Whether to run cross-validation...')
+
+    parser.add_argument('total_runs',
+                         type=int, 
+                         help='How many runs per parameter value...?')
+
+    parser.add_argument('question_no',
+                         type=str, 
+                         help='Specify the question number...')
+    
+    args = parser.parse_args()
+    
+    question_no = args.question_no
+    total_runs = args.total_runs
+    run_test = args.run_test
+    run_mul = args.run_mul
+    run_cv = args.run_cv
+
+
     # Set random seed
     np.random.seed(13290138)
 
-    # Generic message for elapsed time used later
-    run_test = 1
-    run_mul = 0
-    run_cv = 0
-
-    # How many runs to do for each hyper-parameter value?
-    total_runs = 20
 
     # Store test arguments
     test_args = {
@@ -382,13 +442,13 @@ if __name__ == '__main__':
     'epochs':20,
     'd':3,
     'tolerance': 0.0001,
-    'sparse_setting': 0
 
     }
 
     # Store kernel parameter list to iterate over
     params = [1, 2, 3, 4, 5, 6, 7]
 
+    # Store the arguments relating to the data set
     data_args = {
 
         'data_path': 'data',
@@ -406,8 +466,8 @@ if __name__ == '__main__':
         'n_classifers': 10,
         'tolerance': 0.000001,
         'convergence_epochs': 5,
-        'sparse_setting': 0,
-        'tolerance': 0.0000001
+        'tolerance': 0.0000001, 
+        'fit_type': 'one_vs_all', 
     }
 
 
@@ -418,8 +478,8 @@ if __name__ == '__main__':
         'kernel_type': 'polynomial', 
         'n_classifiers': 10, 
         'tolerance':0.000001,
-        'convergence_epochs': 5, 
-        'sparse_setting': 0
+        'convergence_epochs': 5,
+        'fit_type': 'one_vs_all',
     
     }
 
@@ -427,7 +487,7 @@ if __name__ == '__main__':
         history = run_test_case(**test_args)
 
     if run_mul == 1:
-        run_multiple(params, data_args, multiple_run_args, total_runs)
+        run_multiple(params, data_args, multiple_run_args, total_runs, question_no)
 
     if run_cv == 1:
-        run_multiple_cv(params, data_args, cv_args)
+        run_multiple_cv(params, data_args, cv_args, total_runs, question_no)
