@@ -138,7 +138,7 @@ def get_train_predictions(alpha, K_examples, Y_encoding, train=False):
     # Then figure out which predictions are wrong?
     signs = np.sign(Y_hat)
     signs[Y_hat == 0] = -1
-    wrong = (Y_encoding*signs < 0)
+    wrong = (Y_encoding*Y_hat <= 0)
 
     return(Y_hat, preds, signs, wrong)
 
