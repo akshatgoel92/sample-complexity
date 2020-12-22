@@ -106,7 +106,7 @@ def train_perceptron(X_train, Y_train,
         
         # Get the training prediction with the updated weights
         Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
-        train_loss = helpers.get_loss(Y_val, preds_val)
+        train_loss = helpers.get_loss(Y_train, preds_train)
 
         # Test the classifier
         Y_hat_val, preds_val = get_final_predictions(alpha, K_val, fit_type)
