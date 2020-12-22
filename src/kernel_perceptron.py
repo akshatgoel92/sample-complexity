@@ -28,7 +28,7 @@ def train_perceptron(X_train, Y_train,
                      X_val, Y_val, epochs, 
                      kernel_type, d, n_classifiers, 
                      tolerance=0.000001, convergence_epochs=5, 
-                     sparse_setting=0, max_epochs = 20, fit_type='one_vs_all'):
+                     sparse_setting=0, max_epochs = 20, fit_type='one_vs_all', neg=1, pos=2):
     '''
     --------------------------------------
     This is the main training loop for
@@ -50,9 +50,10 @@ def train_perceptron(X_train, Y_train,
     # Store encoding
     if fit_type == 'one_vs_all':
         Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classifiers)
+    
     elif fit_type == 'one_vs_one': 
         Y_encoding = np.ones(len(Y_train), np.int32)
-        Y_encoding[Y_train == j] = -1
+        Y_encoding[Y_train == neg] = -1
     
     # Get kernel
     if kernel_type == 'polynomial':
@@ -63,59 +64,57 @@ def train_perceptron(X_train, Y_train,
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
-    # Initialize
+    # Initialize containers
     alpha = np.zeros((n_classifiers, K_train.shape[0]))
     n_samples = np.max(Y_train.shape)
-
     mistake_tracker = []
     
     
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
-        if convergence_counter >= convergence_epochs or np.allclose(prev_loss, 0.0) or epoch > max_epochs:
+        if convergence_counter >= convergence_epochs or np.allclose(prev_loss, 0.0):
             break
 
-        # Count mistakes
+        # Initialize mistakes
         mistakes = 0
-        update_counter = 0
         
         # Do this for each example in the dataset
         for i in range(n_samples):
 
-            Y_hat, y_pred, signs, wrong = get_train_predictions(alpha, K_train[i, :], Y_encoding[i])
-            mistakes += (y_pred != Y_train[i]).astype(int)
+            # Get predictions on the training set
+            Y_hat, y_pred, signs, wrong, mistake = get_train_predictions(alpha, K_train[i, :], Y_encoding[i], Y_train[i])
+            mistakes += mistake
             
+            # Update classifiers even if a single one makes a mistake
             if np.sum(wrong) > 0:
                 mistake_tracker.append(i)
                 alpha[wrong, i] -= signs[wrong]
 
+        # Update the mistake tracker
         mistake_tracker = list(set(mistake_tracker))
         print(len(mistake_tracker))
 
-        # We finally compute predictions and loss at the end of each epoch
-        # It is a mistake if the class with the highest predicted value does not equal the true label
-        # mistakes += int((np.argmax(Y_hat) + 1) != int(Y_train[i]))
-        # Now we compute validation predictions
+        # Results tracking
         train_loss = mistakes/n_samples
+        history['train_loss'].append(train_loss)
 
         # Convergence check
         if np.abs(train_loss - prev_loss) < tolerance:
             convergence_counter += 1
 
-        # Update the previous loss after checking convergence
+        # Update previous loss
         prev_loss = train_loss
             
-        # We append to the history dictionary as a record
-        history['train_loss'].append(train_loss)
-        
-        # We print the accuracies at the end of each epoch
+        # Print the accuracies at the end of each epoch
         msg = 'Train loss: {}, Epoch: {}'
         print(msg.format(train_loss, epoch))
 
     # Test the classifier
     Y_hat_val, preds_val = get_val_predictions(alpha, K_val)
     val_loss = helpers.get_loss(Y_val, preds_val)
+    
+    # Store testing results
     history['val_loss'].append(val_loss)
     history['preds_val'].append(preds_val)
     
@@ -123,30 +122,46 @@ def train_perceptron(X_train, Y_train,
     return(history)
 
 
-def get_train_predictions(alpha, K_examples, Y_encoding, train=False):
+def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type='one_vs_all'):
     '''
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
     '''
-    # Take the maximum argument in each column
+    # Get the raw predictions for each y-value
     Y_hat = alpha @ K_examples
-    preds = np.argmax(Y_hat, axis = 0)
-    
-    # Store the sign of the predictions
-    # Then figure out which predictions are wrong?
-    signs = np.sign(Y_hat)
-    signs[Y_hat == 0] = -1
+
+    # Then figure out which predictions are wrong
+    # Arbitrarily assign 0 to be wrong
     wrong = (Y_encoding*Y_hat <= 0)
 
-    return(Y_hat, preds, signs, wrong)
+    # Store the sign of the predictions
+    # This is used in the update
+    signs = np.sign(Y_hat)
+    signs[Y_hat == 0] = -1
+
+    # Get final predictions
+    # For one vs. all this is the arg. max of the raw predictions
+    # We make a mistake if this does not equal the target
+    if fit_type == 'one_vs_all':
+
+        preds = np.argmax(Y_hat, axis = 0)
+        mistake = (preds != target).astype(int)
+        
+    # For one vs. one this is the sign of prediction
+    # We make a mistake if this does not equal the encoding
+    elif fit_type == 'one_vs_one':
+        preds = signs[0]
+        mistake = (preds != Y_encoding).astype(int)
+        print(Y_hat, wrong, signs, preds, target, Y_encoding)
+
+    # Return statement
+    return(Y_hat, preds, signs, wrong, mistake)
 
 
 def get_val_predictions(alpha, K_examples):
     '''
-    --------------------------------------
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
-    --------------------------------------
     '''
     # Take the maximum argument in each column
     Y_hat = alpha @ K_examples
@@ -266,14 +281,18 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
         X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
         X, Y = helpers.shuffle_data(X, Y)
 
+        # Split into training and validation set
         X_train, X_test, Y_train, Y_test = helpers.split_data(X, Y, data_args['train_percent'])
         Y_train = Y_train.astype(int)
         Y_test = Y_test.astype(int)
-            
+        
+        # Divide into a list of folds
         X_folds, Y_folds = helpers.get_k_folds(X_train, Y_train, data_args['k'])
 
+        # Now iterate through the parameters
         for param in params: 
 
+            # Store the history of each fold here
             fold_histories = []
     
             # Now go through each fold : every fold becomes the hold-out set at least once
@@ -297,6 +316,8 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
             # Get avg. accuracies by epoch across folds
             avg_history = helpers.get_cv_results(fold_histories)
             best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(avg_history)
+            
+            # Append history
             histories['best_training_loss'].append(best_training_loss)
             histories['best_dev_loss'].append(best_dev_loss)
             histories['best_epoch'].append(best_epoch)
@@ -346,8 +367,8 @@ if __name__ == '__main__':
     np.random.seed(13290138)
 
     # Generic message for elapsed time used later
-    run_test = 0
-    run_mul = 1
+    run_test = 1
+    run_mul = 0
     run_cv = 0
 
     # How many runs to do for each hyper-parameter value?
@@ -402,7 +423,7 @@ if __name__ == '__main__':
     
     }
 
-    if run_test == 0:
+    if run_test == 1:
         history = run_test_case(**test_args)
 
     if run_mul == 1:
