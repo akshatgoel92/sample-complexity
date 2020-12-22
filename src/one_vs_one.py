@@ -1,34 +1,74 @@
-def one_vs_one(X_train, Y_train, X_test):
+import kernel_perceptron as perceptron
+import helpers
+import numpy as np
+
+
+def train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, n_classes=3):
   '''
   Input:
   Output:
   '''
-
-  n_samples = len(X_train)
+  n_samples = len(Y_train)
+  predictions = np.array([np.empty(n_samples)])
+  votes = np.zeros((n_classes, len(Y_val)))
   
-  predictions = np.array([np.empty(n)])
-  
-  votes = np.zeros((n_classes, len(test_data)))
-  
-  for i in range(3):
-    for j in range(i+1, 3):
+  for i in range(n_classes):
+    for j in range(i+1, n_classes):
       
-      data = training_data[(training_labels == i) | (training_labels == j)]
-      j_labels = training_labels[(training_labels == i) | (training_labels == j)]
+      X_train = X_train[(Y_train == i) | (Y_train == j)]
+      j_labels = Y_train[(Y_train == i) | (Y_train == j)]
       
-      labels = np.ones(len(j_labels), np.int32)
-      labels[j_labels == j] = -1
+      Y_encoding = np.ones(len(j_labels), np.int32)
+      Y_encoding[j_labels == j] = -1
 
-      weights = perceptron(data, labels)
-      prediction = test_data.dot(weights)
+      history = perceptron.train_perceptron(X_train, Y_encoding, X_val, Y_val, **perceptron_args, fit_type='one_vs_one')
+      prediction = history['preds_val']
 
-      i_votes = np.zeros(len(test_data))
+      i_votes = np.zeros(len(Y_val))
       i_votes[prediction > 0] = 1
-      
       votes[i] += i_votes
-      j_votes = np.zeros(len(test_data))
-      j_votes[prediction <= 0] = 1
       
+      j_votes = np.zeros(len(Y_val))
+      j_votes[prediction <= 0] = 1
       votes[j] += j_votes
   
   return np.argmax(votes, axis=0)
+
+
+if __name__ == '__main__':
+
+
+  perceptron_args = {
+    
+        'epochs': 20, 
+        'kernel_type': 'polynomial', 
+        'n_classes': 2,
+        'tolerance': 0.000001,
+        'convergence_epochs': 5,
+        'sparse_setting': 0,
+        'tolerance': 0.0000001, 
+        'd':3
+    }
+
+  X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
+  X_val, Y_val = helpers.load_data("data", "dtest123.dat")
+  
+  Y_train = Y_train.astype(int)
+  Y_val = Y_val.astype(int)
+  
+  train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args)
+
+
+'''
+For testing
+'''
+'''
+epochs = 20
+kernel_type = 'polynomial'
+n_classes = 3
+tolerance = 0.000001
+convergence_epochs = 5
+sparse_setting = 0
+tolerance = 0.000001
+d = 3
+'''

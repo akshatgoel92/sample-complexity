@@ -118,13 +118,13 @@ def get_k_folds(X, Y, k):
     return(X_folds, Y_folds)
 
 
-def get_accuracy(target, pred):
+def get_loss(target, pred):
     '''
     Returns binary accuracy given 
     two arrays containing true values
     and predicted values respectively.
     '''
-    return np.sum(target==pred)/max(target.shape)
+    return 1 - (np.sum(target==pred)/max(target.shape))
 
 
 def get_confusion_matrix(target, pred):
@@ -158,6 +158,23 @@ def get_confusion_matrix(target, pred):
     return(cf)
 
 
+def compute_final_cf(n_classes):
+    '''
+    Post-process the final CF into the format required by
+    the question
+    '''
+
+    results = open_results('3_2')
+
+    n_cf = len(results)
+    cf = np.zeros((n_classes, n_classes))
+
+    for result in results:
+        cf = np.add(cf, result['val_cf'])
+
+    return(cf)
+
+
 def get_loss_plot(results, lab, run_no, param):
   '''
   Convenience function to plot results
@@ -184,18 +201,18 @@ def get_best_results(history):
     This function takes in a 
     dictionary containing an
     epoch-wise record of training
-    and validation set binary accuracies
+    and validation set binary losses
     and returns the epoch at which the highest
     binary accuracy was reached on the dev. set 
-    along with the associated accuracies on both
+    along with the associated losses on both
     training and dev. set at that epoch.
     '''
     # Store results
-    best_epoch = np.array(history["val_accuracies"]).argmax()
-    best_training_accuracy = history['train_accuracies'][best_epoch]
-    best_dev_accuracy = history['val_accuracies'][best_epoch]
+    best_epoch = np.array(history["val_loss"]).argmin()
+    best_training_loss = history['train_loss'][best_epoch]
+    best_dev_loss = history['val_loss'][best_epoch]
 
-    return(best_epoch, best_training_accuracy, best_dev_accuracy)
+    return(best_epoch, best_training_loss, best_dev_loss)
 
 
 
@@ -221,6 +238,9 @@ def save_results(results, question_no):
 
 
 def save_experiment_results(results, question_no):
+    '''
+    Save the results of an entire model selection run
+    '''
 
     train_acc = []
     test_acc = []
@@ -230,10 +250,10 @@ def save_experiment_results(results, question_no):
 
     for result in results:
         params.append(result['params'])
-        train_acc.append(np.mean(np.array(result['best_training_accuracy'])))
-        test_acc.append(np.mean(np.array(result['best_dev_accuracy'])))
-        train_std.append(np.std(np.array(result['best_training_accuracy'])))
-        test_std.append(np.std(np.array(result['best_dev_accuracy'])))
+        train_acc.append(np.mean(np.array(result['best_training_loss'])))
+        test_acc.append(np.mean(np.array(result['best_dev_loss'])))
+        train_std.append(np.std(np.array(result['best_training_loss'])))
+        test_std.append(np.std(np.array(result['best_dev_loss'])))
 
     
     results_df = pd.DataFrame([train_acc, train_std, test_acc, test_std], columns = [params], 
@@ -249,7 +269,7 @@ def save_experiment_results(results, question_no):
 
 def open_results(question_no):
     '''
-    Save results according to question no.
+    Open results according to question no.
     '''
     with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'rb') as f:
         results = pickle.load(f)
@@ -257,17 +277,7 @@ def open_results(question_no):
     return(results)
 
 
-def compute_final_cf(n_classes):
 
-    results = open_results('3_2')
-
-    n_cf = len(results)
-    cf = np.zeros((n_classes, n_classes))
-
-    for result in results:
-        cf = np.add(cf, result['val_cf'])
-
-    return(cf)
 
 
 def get_cv_results(histories, k = 5):
@@ -283,8 +293,8 @@ def get_cv_results(histories, k = 5):
     --------------------------------
     '''
     avg_history = {}
-    avg_history['train_accuracies'] = np.mean(np.array([history['train_accuracies'] for history in histories]), axis = 0)
-    avg_history['val_accuracies'] = np.mean(np.array([history['val_accuracies'] for history in histories]), axis = 0)
+    avg_history['train_loss'] = np.mean(np.array([history['train_loss'] for history in histories]), axis = 0)
+    avg_history['val_loss'] = np.mean(np.array([history['val_loss'] for history in histories]), axis = 0)
 
     return(avg_history)
 

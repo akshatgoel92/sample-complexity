@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 # Checks to do:
 # 1) Check CV method of averaging
-# 2) Change from accuracy to error everywhere
+# 2) Change from loss to error everywhere
 # 3) Check how best to represent sum 
 # 4) Check how best to represent 
 
@@ -27,7 +27,8 @@ import matplotlib.pyplot as plt
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
                      kernel_type, d, n_classes, 
-                     tolerance=0.00001, convergence_epochs=5, sparse_setting=0):
+                     tolerance=0.000001, convergence_epochs=5, 
+                     sparse_setting=0, max_epochs = 20, fit_type='one_vs_all'):
     '''
     --------------------------------------
     This is the main training loop for
@@ -36,26 +37,23 @@ def train_perceptron(X_train, Y_train,
     '''
     # Store a record of training and validation accuracies and other data from each epoch
     history = {
-        "train_accuracies": [],
-        "val_accuracies": [],
+        "train_loss": [],
+        "val_loss": [],
         "preds_train": [],
         "preds_val": []
     }
 
     # Store minimum loss for convergence check
-    prev_accuracy = 0
+    prev_loss = np.inf
     convergence_counter = 0
 
-    # Initialize alpha weights and store 
-    # the number of samples
-
-
     # Store encoding
-    Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
+    if fit_type == 'one_vs_all':
+        Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
+    else: 
+        Y_encoding = Y_train
     
-    # Transform X according to the user specified kernel
-    # Can be either polynomial kernel or Gaussian kernel
-    # Do this for both training and validation set
+    # Get kernel
     if kernel_type == 'polynomial':
         K_train = helpers.get_polynomial_kernel(X_train, X_train, d)
         K_val = helpers.get_polynomial_kernel(X_train, X_val, d)
@@ -64,18 +62,14 @@ def train_perceptron(X_train, Y_train,
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
+    # Initialize
     alpha = np.zeros((n_classes, K_train.shape[0]))
     n_samples = np.max(Y_train.shape)
-
-    if sparse_setting == 1:
-        alpha = sparse.csc_matrix(alpha)
-
-
-
+    
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
-        if convergence_counter >=convergence_epochs:
+        if convergence_counter >= convergence_epochs or np.allclose(prev_loss, 0.0) or epoch > max_epochs:
             break
 
         # Count mistakes
@@ -83,112 +77,64 @@ def train_perceptron(X_train, Y_train,
         
         # Do this for each example in the dataset
         for i in range(n_samples):
-            # Compute the prediction with the current weights:
-            # dim(alpha) --> (10, 6199), 
-            # dim(K_train[i, :]) ---> (6199, 1) 
-            # ====> dim(y_hat) --> 10 X 1
-            # Perform update
-            Y_hat, y_pred = get_predictions(alpha, K_train[i, :])
-            mistakes += (y_pred == Y_train[i]).astype(int)
 
+            Y_hat, y_pred, signs, wrong = get_train_predictions(alpha, K_train[i, :], Y_encoding[i])
             
-            if sparse_setting == 1:
-                alpha = get_sparse_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding)
-            else:
-                alpha = get_update(Y_train, Y_hat, alpha, n_classes, i, Y_encoding)
+            if np.sum(wrong) > 0:
+                alpha[wrong, i] -= signs[wrong]
 
-        # We finally compute predictions and accuracy at the end of each epoch
+            # Store mistakes
+            mistakes += (y_pred != Y_train[i]).astype(int)
+
+        # We finally compute predictions and loss at the end of each epoch
         # It is a mistake if the class with the highest predicted value does not equal the true label
         # mistakes += int((np.argmax(Y_hat) + 1) != int(Y_train[i]))
-        # Store train accuracy
-        train_accuracy = mistakes/n_samples
         # Now we compute validation predictions
-        Y_hat_val, preds_val = get_predictions(alpha, K_val)
-        val_accuracy = helpers.get_accuracy(Y_val, preds_val)
-
+        train_loss = mistakes/n_samples
 
         # Convergence check
-        if train_accuracy - prev_accuracy < tolerance:
+        if np.abs(train_loss - prev_loss) < tolerance:
             convergence_counter += 1
 
-        # Update the previous accuracy after checking convergence
-        prev_accuracy = train_accuracy
+        # Update the previous loss after checking convergence
+        prev_loss = train_loss
             
-        
         # We append to the history dictionary as a record
-        history['train_accuracies'].append(train_accuracy)
-        history['val_accuracies'].append(val_accuracy)
-        # history['preds_train'].append(preds_train)
-        history['preds_val'].append(preds_val)
-
+        history['train_loss'].append(train_loss)
         
         # We print the accuracies at the end of each epoch
-        msg = 'Train accuracy: {}, Validation accuracy: {}, Epoch: {}'
-        print(msg.format(train_accuracy, val_accuracy, epoch))
+        msg = 'Train loss: {}, Epoch: {}'
+        print(msg.format(train_loss, epoch))
+
+    # Test the classifier
+    Y_hat_val, preds_val = get_val_predictions(alpha, K_val)
+    val_loss = helpers.get_loss(Y_val, preds_val)
+    history['val_loss'].append(val_loss)
+    history['preds_val'].append(preds_val)
     
     # Return statement
     return(history)
 
 
-def get_sparse_update(Y_train, Y_hat, alpha, n_classes, i, Y):
+def get_train_predictions(alpha, K_examples, Y_encoding, train=False):
     '''
-    --------------------------------------
     Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
-
-    # Now first make a matrix Y with dim(Y) ---> (n_classes,) which is only filled with -1
-    # Then get the label from the Y_train matrix
-    # If this label is 6 then we want to change the 6th index to 1
-    # Y = get_one_hot_encoding(n_classes, Y_train, i)
-    # Compute sign of predictions and store indices to update        
-    # Check if the prediction is correct against the labels
-    # If it is correct we don't need to make any updates: we just move to the next iteration
-    # If it is not correct then we update the weights and biases in the direction of the label
-    --------------------------------------
     '''
-    Y = Y[i]
-    signs = np.ones(Y_hat.shape)
-    signs[Y_hat <= 0] = -1
-    signs[Y == 0] = 0
-    wrong = (Y*Y_hat <= 0).astype(int)
-
-    # Make the update if any of the classifiers are wrong
-    if np.sum(wrong) > 0:
-        alpha = alpha.tolil()
-        alpha[:, i] -= (signs*wrong).reshape(alpha[:, i].shape)
-        alpha = alpha.tocsc()
+    # Take the maximum argument in each column
+    Y_hat = alpha @ K_examples
+    preds = np.argmax(Y_hat, axis = 0)
     
-    return(alpha)
+    # Store the sign of the predictions
+    # Then figure out which predictions are wrong?
+    signs = np.sign(Y_hat)
+    signs[Y_hat == 0] = -1
+    wrong = (Y_encoding*signs <= 0)
+
+    return(Y_hat, preds, signs, wrong)
 
 
-def get_update(Y_train, Y_hat, alpha, n_classes, i, Y):
-    '''
-    --------------------------------------
-    Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
-
-    # Now first make a matrix Y with dim(Y) ---> (n_classes,) which is only filled with -1
-    # Then get the label from the Y_train matrix
-    # If this label is 6 then we want to change the 6th index to 1
-    # Y = get_one_hot_encoding(n_classes, Y_train, i)
-    # Compute sign of predictions and store indices to update        
-    # Check if the prediction is correct against the labels
-    # If it is correct we don't need to make any updates: we just move to the next iteration
-    # If it is not correct then we update the weights and biases in the direction of the label
-    --------------------------------------
-    '''
-    Y = Y[i]
-    signs = np.ones(Y_hat.shape)
-    signs[Y_hat <= 0] = -1
-    wrong = (Y*Y_hat <= 0)
-    
-    if np.sum(wrong) > 0:
-        alpha[wrong, i] -= signs[wrong]
-
-    return(alpha)
-
-
-def get_predictions(alpha, K_examples):
+def get_val_predictions(alpha, K_examples):
     '''
     --------------------------------------
     Returns raw predictions and class predictions
@@ -199,7 +145,6 @@ def get_predictions(alpha, K_examples):
     Y_hat = alpha @ K_examples
     preds = np.argmax(Y_hat, axis = 0)
     
-    # Return statement
     return(Y_hat, preds)
 
 
@@ -236,6 +181,10 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
     '''
     results = []
     overall_run_no = 0
+
+    time_msg = "Elapsed time is....{} minutes"
+    start = time.time()
+
     
     for param in params:
 
@@ -244,8 +193,8 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
         'params': param, 
         'history': [],
         'best_epoch': [],
-        'best_training_accuracy': [],
-        'best_dev_accuracy': [],
+        'best_training_loss': [],
+        'best_dev_loss': [],
         }
         
         for run in range(total_runs):
@@ -260,18 +209,20 @@ def run_multiple(params, data_args, kwargs, total_runs=5):
             Y_val = Y_val.astype(int)
 
             # Call the perceptron training with the given epochs
-            # Return best epoch according to dev. accuracy and the associated accuracies on both datasets
+            # Return best epoch according to dev. loss and the associated accuracies on both datasets
             history = train_perceptron(X_train, Y_train, X_val, Y_val, **kwargs, d=param)
-            best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(history)
+            best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(history)
             
             # Store results
-            histories['best_training_accuracy'].append(best_training_accuracy)
-            histories['best_dev_accuracy'].append(best_dev_accuracy)
+            histories['best_training_loss'].append(best_training_loss)
+            histories['best_dev_loss'].append(best_dev_loss)
             histories['best_epoch'].append(best_epoch)
             histories['history'].append(history)
 
             overall_run_no += 1
             print("This is overall run no {}".format(overall_run_no))
+            elapsed = (time.time() - start)/60
+            print(time_msg.format(elapsed))
         
         # Store results
         results.append(histories)
@@ -286,20 +237,22 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
     '''
     --------------------------------------
     Check which kernel parameter results
-    in highest validation accuracy
+    in highest validation loss
     --------------------------------------
     '''
     results = []
+
     
     for run in range(total_runs):
+
 
         histories = {
         
             'params': params, 
             'history': [],
             'best_epoch': [],
-            'best_training_accuracy': [],
-            'best_dev_accuracy': [],
+            'best_training_loss': [],
+            'best_dev_loss': [],
             }
 
         # Prepare data for the perceptron
@@ -336,14 +289,14 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
             
             # Get avg. accuracies by epoch across folds
             avg_history = helpers.get_cv_results(fold_histories)
-            best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(avg_history)
-            histories['best_training_accuracy'].append(best_training_accuracy)
-            histories['best_dev_accuracy'].append(best_dev_accuracy)
+            best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(avg_history)
+            histories['best_training_loss'].append(best_training_loss)
+            histories['best_dev_loss'].append(best_dev_loss)
             histories['best_epoch'].append(best_epoch)
             histories['history'].append(avg_history)
 
         # Get best parameter value
-        best_dev_config = np.argmin(np.array(histories['best_dev_accuracy']))
+        best_dev_config = np.argmin(np.array(histories['best_dev_loss']))
         best_param = histories['params'][best_dev_config]
 
         # Retrain
@@ -356,13 +309,13 @@ def run_multiple_cv(params, data_args, kwargs, total_runs=2):
                                    **cv_args, d=best_param)
         
         # Get retraining results
-        best_epoch, best_training_accuracy, best_dev_accuracy = helpers.get_best_results(history)
+        best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(history)
         preds_train = history['preds_train'][best_epoch]
         preds_val = history['preds_val'][best_epoch]
         
         # Update the results
-        histories['best_training_accuracy'] = [best_training_accuracy]
-        histories['best_dev_accuracy'] = [best_dev_accuracy]
+        histories['best_training_loss'] = [best_training_loss]
+        histories['best_dev_loss'] = [best_dev_loss]
         histories['best_epoch'] = [best_epoch]
         histories['params'] = best_param
         histories['history'] = [history]
@@ -386,9 +339,8 @@ if __name__ == '__main__':
     np.random.seed(13290138)
 
     # Generic message for elapsed time used later
-    time_msg = "Elapsed time is....{} minutes"
-    run_test = 1
-    run_mul = 0
+    run_test = 0
+    run_mul = 1
     run_cv = 0
 
     # How many runs to do for each hyper-parameter value?
@@ -426,7 +378,8 @@ if __name__ == '__main__':
         'n_classes': 10,
         'tolerance': 0.000001,
         'convergence_epochs': 5,
-        'sparse_setting': 0
+        'sparse_setting': 0,
+        'tolerance': 0.0000001
     }
 
 
@@ -442,15 +395,11 @@ if __name__ == '__main__':
     
     }
 
-
-    if run_test == 1:
+    if run_test == 0:
         history = run_test_case(**test_args)
 
     if run_mul == 1:
-        start = time.time()
         run_multiple(params, data_args, multiple_run_args, total_runs)
-        elapsed = (time.time() - start)/60
-        print(time_msg.format(elapsed))
 
     if run_cv == 1:
         run_multiple_cv(params, data_args, cv_args)
