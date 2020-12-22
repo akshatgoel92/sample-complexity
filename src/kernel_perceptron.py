@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 
 def train_perceptron(X_train, Y_train, 
                      X_val, Y_val, epochs, 
-                     kernel_type, d, n_classes, 
+                     kernel_type, d, n_classifiers, 
                      tolerance=0.000001, convergence_epochs=5, 
                      sparse_setting=0, max_epochs = 20, fit_type='one_vs_all'):
     '''
@@ -49,9 +49,10 @@ def train_perceptron(X_train, Y_train,
 
     # Store encoding
     if fit_type == 'one_vs_all':
-        Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classes)
-    else: 
-        Y_encoding = Y_train
+        Y_encoding = helpers.get_one_vs_all_encoding(Y_train, n_classifiers)
+    elif fit_type == 'one_vs_one': 
+        Y_encoding = np.ones(len(Y_train), np.int32)
+        Y_encoding[Y_train == j] = -1
     
     # Get kernel
     if kernel_type == 'polynomial':
@@ -63,8 +64,11 @@ def train_perceptron(X_train, Y_train,
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
     # Initialize
-    alpha = np.zeros((n_classes, K_train.shape[0]))
+    alpha = np.zeros((n_classifiers, K_train.shape[0]))
     n_samples = np.max(Y_train.shape)
+
+    mistake_tracker = []
+    
     
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
@@ -74,6 +78,7 @@ def train_perceptron(X_train, Y_train,
 
         # Count mistakes
         mistakes = 0
+        update_counter = 0
         
         # Do this for each example in the dataset
         for i in range(n_samples):
@@ -81,10 +86,14 @@ def train_perceptron(X_train, Y_train,
             Y_hat, y_pred, signs, wrong = get_train_predictions(alpha, K_train[i, :], Y_encoding[i])
             
             if np.sum(wrong) > 0:
+                mistake_tracker.append(i)
                 alpha[wrong, i] -= signs[wrong]
 
             # Store mistakes
             mistakes += (y_pred != Y_train[i]).astype(int)
+
+        mistake_tracker = list(set(mistake_tracker))
+        print(len(mistake_tracker))
 
         # We finally compute predictions and loss at the end of each epoch
         # It is a mistake if the class with the highest predicted value does not equal the true label
@@ -129,7 +138,7 @@ def get_train_predictions(alpha, K_examples, Y_encoding, train=False):
     # Then figure out which predictions are wrong?
     signs = np.sign(Y_hat)
     signs[Y_hat == 0] = -1
-    wrong = (Y_encoding*signs <= 0)
+    wrong = (Y_encoding*signs < 0)
 
     return(Y_hat, preds, signs, wrong)
 
@@ -148,7 +157,7 @@ def get_val_predictions(alpha, K_examples):
     return(Y_hat, preds)
 
 
-def run_test_case(epochs, kernel_type, d, n_classes, tolerance, sparse_setting):
+def run_test_case(epochs, kernel_type, d, n_classifiers, tolerance, sparse_setting):
     '''
     --------------------------------------
     Execute the training steps above and generate
@@ -165,7 +174,7 @@ def run_test_case(epochs, kernel_type, d, n_classes, tolerance, sparse_setting):
     Y_val = Y_val.astype(int)
 
     history = train_perceptron(X_train, Y_train, X_val, Y_val, epochs, 
-                               kernel_type, d, n_classes, tolerance)
+                               kernel_type, d, n_classifiers, tolerance)
 
     return(history)
 
@@ -350,7 +359,7 @@ if __name__ == '__main__':
     test_args = {
 
     'kernel_type': 'polynomial',
-    'n_classes': 3,
+    'n_classifiers': 3,
     'epochs':20,
     'd':3,
     'tolerance': 0.0001,
@@ -375,7 +384,7 @@ if __name__ == '__main__':
     
         'epochs': 20, 
         'kernel_type': 'polynomial', 
-        'n_classes': 10,
+        'n_classifers': 10,
         'tolerance': 0.000001,
         'convergence_epochs': 5,
         'sparse_setting': 0,
@@ -388,7 +397,7 @@ if __name__ == '__main__':
     
         'epochs': 4,
         'kernel_type': 'polynomial', 
-        'n_classes': 10, 
+        'n_classifiers': 10, 
         'tolerance':0.000001,
         'convergence_epochs': 5, 
         'sparse_setting': 0

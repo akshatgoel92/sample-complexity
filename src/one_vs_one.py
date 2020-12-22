@@ -15,13 +15,10 @@ def train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, n_classes=
   for i in range(n_classes):
     for j in range(i+1, n_classes):
       
-      X_train = X_train[(Y_train == i) | (Y_train == j)]
-      j_labels = Y_train[(Y_train == i) | (Y_train == j)]
+      X_train_subset = X_train[(Y_train == i) | (Y_train == j)]
+      Y_train_subset = Y_train[(Y_train == i) | (Y_train == j)]
       
-      Y_encoding = np.ones(len(j_labels), np.int32)
-      Y_encoding[j_labels == j] = -1
-
-      history = perceptron.train_perceptron(X_train, Y_encoding, X_val, Y_val, **perceptron_args, fit_type='one_vs_one')
+      history = perceptron.train_perceptron(X_train, Y_train, X_val, Y_val, **perceptron_args, fit_type='one_vs_one')
       prediction = history['preds_val']
 
       i_votes = np.zeros(len(Y_val))
@@ -55,7 +52,7 @@ if __name__ == '__main__':
   
   Y_train = Y_train.astype(int)
   Y_val = Y_val.astype(int)
-  
+
   train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args)
 
 
@@ -65,7 +62,7 @@ For testing
 '''
 epochs = 20
 kernel_type = 'polynomial'
-n_classes = 3
+n_classifiers = 1
 tolerance = 0.000001
 convergence_epochs = 5
 sparse_setting = 0
