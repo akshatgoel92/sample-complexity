@@ -84,13 +84,11 @@ def train_perceptron(X_train, Y_train,
         for i in range(n_samples):
 
             Y_hat, y_pred, signs, wrong = get_train_predictions(alpha, K_train[i, :], Y_encoding[i])
+            mistakes += (y_pred != Y_train[i]).astype(int)
             
             if np.sum(wrong) > 0:
                 mistake_tracker.append(i)
                 alpha[wrong, i] -= signs[wrong]
-
-            # Store mistakes
-            mistakes += (y_pred != Y_train[i]).astype(int)
 
         mistake_tracker = list(set(mistake_tracker))
         print(len(mistake_tracker))
