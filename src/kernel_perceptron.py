@@ -76,6 +76,9 @@ def train_perceptron(X_train, Y_train,
 
     # Store the mistake tracker
     mistake_tracker = []
+
+    # Store online predictions here
+    preds_train = np.array([])
     
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
@@ -97,34 +100,31 @@ def train_perceptron(X_train, Y_train,
                                                                          fit_type)
             # Increment the mistake counter
             mistakes += mistake
+
+            # Increment predictions
+            preds_train = np.append(preds_train, y_pred)
             
             # Update classifiers even if a single one makes a mistake
             if np.sum(wrong) > 0:
                 mistake_tracker.append(i)
                 alpha[wrong, i] -= signs[wrong]
 
-        
+        # Update the mistake tracker
+        mistake_tracker = list(set(mistake_tracker))
+
         # Get the training prediction with the updated weights
-        Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
-        train_loss = helpers.get_loss(Y_train, preds_train)
+        train_loss = mistakes/n_samples
+        history['train_loss'].append(train_loss)
+        history['preds_train'].append(preds_train)
 
         # Test the classifier
-        Y_hat_val, preds_val = get_final_predictions(alpha, K_val, fit_type)
+        _, preds_val = get_final_predictions(alpha, K_val, fit_type)
         val_loss = helpers.get_loss(Y_val, preds_val)
 
         # Store testing results
-        history['train_loss'].append(train_loss)
-        history['preds_train'].append(preds_train)
         history['val_loss'].append(val_loss)
         history['preds_val'].append(preds_val)
         
-        # Update the mistake tracker
-        mistake_tracker = list(set(mistake_tracker))
-        
-        # Results tracking
-        train_loss = mistakes/n_samples
-        history['train_loss'].append(train_loss)
-
         # Convergence check
         if np.abs(train_loss - prev_loss) < tolerance:
             convergence_counter += 1
@@ -135,8 +135,6 @@ def train_perceptron(X_train, Y_train,
         # Print the accuracies at the end of each epoch
         msg = 'Train loss: {}, Epoch: {}'
         print(msg.format(train_loss, epoch))
-
-
     
     # Return statement
     return(history)
@@ -258,7 +256,7 @@ def run_multiple(params, data_args, kwargs, total_runs, question_no):
 
             # Call the perceptron training with the given epochs
             # Return best epoch according to dev. loss and the associated accuracies on both datasets
-            history = train_perceptron(X_train, Y_train, X_val, Y_val, **kwargs, d=param)
+            history = train_perceptron(X_train, Y_train, X_val, Y_val, **kwargs, d=param, question_no=question_no)
             best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(history)
             
             # Store results
@@ -463,7 +461,7 @@ if __name__ == '__main__':
     
         'epochs': 20, 
         'kernel_type': 'polynomial', 
-        'n_classifers': 10,
+        'n_classifiers': 10,
         'tolerance': 0.000001,
         'convergence_epochs': 5,
         'tolerance': 0.0000001, 
@@ -474,7 +472,7 @@ if __name__ == '__main__':
     # Search for the best parameters with the polynomial kernel
     cv_args = {
     
-        'epochs': 4,
+        'epochs': 20,
         'kernel_type': 'polynomial', 
         'n_classifiers': 10, 
         'tolerance':0.000001,
