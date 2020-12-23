@@ -70,6 +70,8 @@ def train_perceptron(X_train, Y_train,
 
     # Initialize container for weights
     alpha = np.zeros((n_classifiers, K_train.shape[0]))
+    active_alpha = np.copy(alpha)
+    active_K_train = np.copy(K_train)
 
     # Store the number of samples
     n_samples = np.max(Y_train.shape)
@@ -77,8 +79,9 @@ def train_perceptron(X_train, Y_train,
     # Store the mistake tracker
     mistake_tracker = []
 
+    # Store this as a list of arrays: we don't want to repeat the lookup every time
+    K_i = [K_train[i, :] for i in range(n_samples)]
 
-    
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
@@ -89,10 +92,9 @@ def train_perceptron(X_train, Y_train,
         
         # Do this for each example in the dataset
         for i in range(n_samples):
-
             # Get predictions on the training set
             Y_hat, y_pred, signs, wrong, mistake = get_train_predictions(alpha, 
-                                                                         K_train[i, :], 
+                                                                         K_i[i], 
                                                                          Y_encoding[i], 
                                                                          Y_train[i], 
                                                                          fit_type)
@@ -107,8 +109,9 @@ def train_perceptron(X_train, Y_train,
                 # Enforce uniqueness in the mistake tracker
                 mistake_tracker = list(set(mistake_tracker))
                 alpha[wrong, i] -= signs[wrong]
+                # active_alpha[:, -1] = alpha[:, i]
+                # active_K_train[:, -1] = active_K_train[:, i]
 
-        
         # Get the training prediction with the updated weights
         train_loss = mistakes/n_samples
 
@@ -173,8 +176,7 @@ def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type):
     elif fit_type == 'one_vs_one':
         preds = signs[0]
         mistake = (preds != Y_encoding).astype(int)
-        print(Y_hat, wrong, signs, preds, target, Y_encoding)
-
+        
     # Return statement
     return(Y_hat, preds, signs, wrong, mistake)
 
@@ -480,7 +482,7 @@ if __name__ == '__main__':
         'kernel_type': 'polynomial', 
         'n_classifiers': 10, 
         'tolerance':0.000001,
-        'convergence_epochs': 1,
+        'convergence_epochs': 2,
         'fit_type': 'one_vs_all',
         'check_convergence': False
     

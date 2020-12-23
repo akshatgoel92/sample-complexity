@@ -22,6 +22,27 @@ def train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, n_classes)
   return history
 
 
+def run_test_case(perceptron_args, n_classes):
+    '''
+    --------------------------------------
+    Execute the training steps above and generate
+    the results that have been specified in the report.
+    --------------------------------------
+    '''
+    X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
+    X_val, Y_val = helpers.load_data("data", "dtest123.dat")
+
+    Y_train = Y_train - 1
+    Y_val = Y_val - 1
+
+    Y_train = Y_train.astype(int)
+    Y_val = Y_val.astype(int)
+
+    history = train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, n_classes)
+
+    return(history)
+
+
 if __name__ == '__main__':
 
   n_classes = 2
@@ -39,10 +60,10 @@ if __name__ == '__main__':
         'question_no': '3_4'
     }
 
-  X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
-  X_val, Y_val = helpers.load_data("data", "dtest123.dat")
-  
-  Y_train = Y_train.astype(int)
-  Y_val = Y_val.astype(int)
 
-  train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, n_classes)
+run_test_case(perceptron_args, n_classes)
+
+  
+
+
+ 
