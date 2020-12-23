@@ -12,6 +12,7 @@ def train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, n_classes)
   predictions = np.array([np.empty(n_samples)])
   votes = np.zeros((n_classes, len(Y_val)))
   count = 0
+  
   for i in range(n_classes):
     for j in range(i+1, n_classes):
       history = perceptron.train_perceptron(X_train, Y_train, X_val, Y_val, **perceptron_args, neg=i, pos=j)
@@ -32,10 +33,10 @@ if __name__ == '__main__':
         'n_classifiers': 1,
         'tolerance': 0.000001,
         'convergence_epochs': 5,
-        'sparse_setting': 0,
         'tolerance': 0.0000001, 
         'd':3, 
         'fit_type': 'one_vs_one',
+        'question_no': '3_4'
     }
 
   X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
