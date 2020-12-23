@@ -1,40 +1,49 @@
 import kernel_perceptron as perceptron
-import helpers
 import numpy as np
+import helpers
 from itertools import combinations
 from operator import itemgetter
+
 
 
 def train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, all_combinations):
   '''
   Train one vs one classifer
   '''
-  results = {}
-  n_samples = len(Y_train)
+  train_predictions = []
+  train_confidences = []
+  val_predictions = []
+  val_confidences = []
+  
+  k = 0
+  tracker = {}
   
   for i in range(n_classes):
     for j in range(i+1, n_classes):
 
+      tracker[(i,j)] = k
       history = perceptron.train_perceptron(X_train, Y_train, X_val, Y_val, **perceptron_args, neg=i, pos=j)
-      results[(i,j)] =  history
+      
+      train_predictions.append(history['preds_train'])
+      train_confidences.append(history['Y_hat_train'])
+      
+      val_predictions.append(history['preds_val'])
+      val_confidences.append(history['Y_hat_val'])
 
-  return results
+      k +=1
+
+  print(tracker)
+
+  train_predictions = np.vstack(train_predictions)
+  train_confidences = np.vstack(train_confidences)
+
+  val_predictions = np.vstack(val_predictions)
+  val_confidences = np.vstack(val_confidences)
+
+  return train_predictions, train_confidences, val_predictions, val_confidences
 
 
-def predict(target, results, all_combinations):
-  '''
-  Prediction function for one vs. one classifier
-  '''
-  combos = list(filter(lambda x: target in x, all_combinations))
-  results = list(itemgetter(*combos)(results))
-  
-  preds_train = np.argmax(np.vstack([result['final_Y_hat_train'] for result in results]), axis = 0)
-  preds_val = np.argmax(np.vstack([result['final_Y_hat_val'] for result in results]), axis = 0)
-
-  return(preds_train, preds_val)
-
-
-def _ovr_decision_function(predictions, confidences, n_classes):
+def predict(predictions, confidences, n_classes):
     """Compute a continuous, tie-breaking OvR decision function from OvO.
     It is important to include a continuous value, not only votes,
     to make computing AUC or calibration meaningful.
@@ -51,13 +60,13 @@ def _ovr_decision_function(predictions, confidences, n_classes):
     """
     
     # Store the number of samples in the predictions
-    n_samples = predictions.shape[0]
+    n_samples = predictions.shape[1]
 
     # Create the vote matrix
-    votes = np.zeros((n_samples, n_classes))
+    votes = np.zeros((n_classes, n_samples))
 
     # Create a matrix which holds the confidence level
-    sum_of_confidences = np.zeros((n_samples, n_classes))
+    sum_of_confidences = np.zeros((n_classes, n_samples))
 
     # k indexes the colum we are at which is in this case which classifier's 
     # predictions we are considering
@@ -82,21 +91,23 @@ def _ovr_decision_function(predictions, confidences, n_classes):
             # So if this confidence is a very large negative number than
             # we are confident that the negative label is the correct label
             # So - 1 * -1 turns into a large positive number
-            sum_of_confidences[:, i] -= confidences[:, k]
+            sum_of_confidences[i, :] -= confidences[k, :]
             # This is the positive label
             # So if the confidence is a large positive number we are confident
             # that the j label is actually the correct label
             # We just add it to the jth column to add a large positive number
             # to it
-            sum_of_confidences[:, j] += confidences[:, k]
+            sum_of_confidences[j, :] += confidences[k, :]
             
             # Wherever the kth classifier predicts 0 we add one vote to
             # the corresponding training example 
-            votes[predictions[:, k] == 0, i] += 1
-            votes[predictions[:, k] == 1, j] += 1
+            votes[i, predictions[k, :] == -1] += 1
+            votes[j, predictions[k, :] == 1] += 1
 
             # Move to the next classifier
             k += 1
+
+    return(np.argmax(votes, axis = 0), np.argmax(sum_of_confidences, axis = 0))
 
 
 def run_test_case(perceptron_args, n_classes, all_combinations):
@@ -104,8 +115,8 @@ def run_test_case(perceptron_args, n_classes, all_combinations):
     Execute the training steps above and generate
     the results that have been specified in the report
     '''
-    X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
-    X_val, Y_val = helpers.load_data("data", "dtest123.dat")
+    X_train, Y_train = helpers.load_data("../data", "dtrain123.dat")
+    X_val, Y_val = helpers.load_data("../data", "dtest123.dat")
 
     Y_train = Y_train - 1
     Y_val = Y_val - 1
@@ -114,10 +125,13 @@ def run_test_case(perceptron_args, n_classes, all_combinations):
     Y_val = Y_val.astype(int)
 
     history = train_one_vs_one(X_train, Y_train, X_val, Y_val, perceptron_args, all_combinations)
+    train_votes_pred, train_conf_preds = predict(history[0], history[1], n_classes)
+    val_votes_pred, val_conf_preds = predict(history[2], history[3], n_classes)
 
-    return(history)
+    train_loss = helpers.get_loss(train_conf_preds, Y_train)
+    val_loss = helpers.get_loss(val_conf_preds, Y_val)
 
-
+    return(train_loss, val_loss)
 
 
 
@@ -132,11 +146,13 @@ if __name__ == '__main__':
         'kernel_type': 'polynomial', 
         'n_classifiers': 1,
         'tolerance': 0.000001,
-        'convergence_epochs': 5,
+        'convergence_epochs': 2,
         'tolerance': 0.0000001, 
         'd':3, 
         'fit_type': 'one_vs_one',
         'question_no': '3_4'
     }
 
-  results = run_test_case(perceptron_args, n_classes, all_combinations)
+  train_loss, val_loss = run_test_case(perceptron_args, n_classes, all_combinations)
+
+  print(train_loss, val_loss)
