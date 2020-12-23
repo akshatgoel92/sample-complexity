@@ -42,7 +42,7 @@ def train_perceptron(X_train, Y_train,
         "train_loss": [],
         "val_loss": [],
         "preds_train": [],
-        "preds_val": []
+        "preds_val": [],
     }
 
     # Store minimum loss for convergence check
@@ -69,14 +69,9 @@ def train_perceptron(X_train, Y_train,
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
     # Initialize container for weights
-    alpha = np.zeros((n_classifiers, K_train.shape[0]))
-    active_alpha = np.copy(alpha)
-    active_K_train = np.copy(K_train)
-
     # Store the number of samples
+    alpha = np.zeros((n_classifiers, K_train.shape[0]))
     n_samples = np.max(Y_train.shape)
-
-    # Store the mistake tracker
     mistake_tracker = []
 
     # Store this as a list of arrays: we don't want to repeat the lookup every time
@@ -109,8 +104,6 @@ def train_perceptron(X_train, Y_train,
                 # Enforce uniqueness in the mistake tracker
                 mistake_tracker = list(set(mistake_tracker))
                 alpha[wrong, i] -= signs[wrong]
-                # active_alpha[:, -1] = alpha[:, i]
-                # active_K_train[:, -1] = active_K_train[:, i]
 
         # Get the training prediction with the updated weights
         train_loss = mistakes/n_samples
@@ -118,12 +111,6 @@ def train_perceptron(X_train, Y_train,
         # Test the classifier
         _, preds_val = get_final_predictions(alpha, K_val, fit_type)
         val_loss = helpers.get_loss(Y_val, preds_val)
-
-         # Store results
-        history['train_loss'].append(train_loss)
-        history['preds_train'].append(np.array(preds_train))
-        history['val_loss'].append(val_loss)
-        history['preds_val'].append(preds_val)
 
         # Print results
         msg = 'Train loss: {}, Epoch: {}'
@@ -141,6 +128,26 @@ def train_perceptron(X_train, Y_train,
 
             if convergence_counter >= convergence_epochs or np.allclose(min_loss, 0):
                 break
+
+        # Store results
+        if fit_type == 'one_vs_all':
+            history['train_loss'].append(train_loss)
+            history['preds_train'].append(np.array(preds_train))
+            history['val_loss'].append(val_loss)
+            history['preds_val'].append(preds_val)
+
+    if fit_type == 'one_vs_one':
+        
+        history = {}
+        
+        Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
+        Y_hat_val, preds_val = get_final_predictions(alpha, K_val, fit_type)
+
+        history['Y_hat_train'] = Y_hat_train
+        history['Y_hat_val'] = Y_hat_val
+
+        history['preds_train'] = preds_train
+        history['preds_val'] = preds_val
 
     # Return statement
     return(history)
