@@ -283,7 +283,7 @@ def open_results(question_no):
 
 
 
-def get_cv_results(histories, k = 5):
+def get_cv_results(histories):
     '''
     --------------------------------
     This function takes in a 

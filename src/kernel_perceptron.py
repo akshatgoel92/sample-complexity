@@ -2,7 +2,7 @@
 import os
 import time
 import pickle
-import helpers
+from src import helpers
 import argparse
 import numpy as np
 import scipy.sparse as sparse 
@@ -30,7 +30,7 @@ def train_perceptron(X_train, Y_train,
                      kernel_type, d, n_classifiers, 
                      question_no, tolerance=0.000001,
                      convergence_epochs=5, 
-                     fit_type='one_vs_all', neg=1, pos=2):
+                     fit_type='one_vs_all', neg=1, pos=2, check_convergence=True):
     '''
     --------------------------------------
     This is the main training loop for
@@ -77,17 +77,19 @@ def train_perceptron(X_train, Y_train,
     # Store the mistake tracker
     mistake_tracker = []
 
-    # Store online predictions here
-    preds_train = np.array([])
+
     
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):
 
-        if convergence_counter >= convergence_epochs or np.allclose(prev_loss, 0.0):
-            break
+        if check_convergence == True: 
+            if convergence_counter >= convergence_epochs or np.allclose(prev_loss, 0.0):
+                break
 
         # Initialize mistakes
+        # Initialize container online predictions here
         mistakes = 0
+        preds_train = []
         
         # Do this for each example in the dataset
         for i in range(n_samples):
@@ -102,7 +104,7 @@ def train_perceptron(X_train, Y_train,
             mistakes += mistake
 
             # Increment predictions
-            preds_train = np.append(preds_train, y_pred)
+            preds_train.append(y_pred)
             
             # Update classifiers even if a single one makes a mistake
             if np.sum(wrong) > 0:
@@ -115,7 +117,7 @@ def train_perceptron(X_train, Y_train,
         # Get the training prediction with the updated weights
         train_loss = mistakes/n_samples
         history['train_loss'].append(train_loss)
-        history['preds_train'].append(preds_train)
+        history['preds_train'].append(np.array(preds_train))
 
         # Test the classifier
         _, preds_val = get_final_predictions(alpha, K_val, fit_type)
@@ -126,8 +128,11 @@ def train_perceptron(X_train, Y_train,
         history['preds_val'].append(preds_val)
         
         # Convergence check
-        if np.abs(train_loss - prev_loss) < tolerance:
-            convergence_counter += 1
+        if check_convergence == True:
+            if train_loss - prev_loss >= 0:
+                convergence_counter += 1
+            else:
+                convergence_counter = 0
 
         # Update previous loss
         prev_loss = train_loss
@@ -340,7 +345,10 @@ def run_multiple_cv(params, data_args, kwargs, total_runs, question_no):
         
                 # Append to the histories file the epoch by epoch record of each fold
                 fold_histories.append(history)
-            
+
+            return(fold_histories)
+      '''   
+
             # Get avg. accuracies by epoch across folds
             avg_history = helpers.get_cv_results(fold_histories)
             best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(avg_history)
@@ -389,7 +397,7 @@ def run_multiple_cv(params, data_args, kwargs, total_runs, question_no):
     # Save the results
     helpers.save_results(results, question_no)
     helpers.save_experiment_results(results, question_no)
-
+    '''
     return(results)
 
 
@@ -463,7 +471,7 @@ if __name__ == '__main__':
         'kernel_type': 'polynomial', 
         'n_classifiers': 10,
         'tolerance': 0.000001,
-        'convergence_epochs': 5,
+        'convergence_epochs': 2,
         'tolerance': 0.0000001, 
         'fit_type': 'one_vs_all', 
     }
@@ -476,8 +484,9 @@ if __name__ == '__main__':
         'kernel_type': 'polynomial', 
         'n_classifiers': 10, 
         'tolerance':0.000001,
-        'convergence_epochs': 5,
+        'convergence_epochs': 2,
         'fit_type': 'one_vs_all',
+        'check_convergence': False
     
     }
 
