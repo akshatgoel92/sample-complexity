@@ -24,30 +24,8 @@ import matplotlib.pyplot as plt
 # Do we shuffle the data at each epoch?
 
 
-
-def train_perceptron(X_train, Y_train, 
-                     X_val, Y_val, epochs, 
-                     kernel_type, d, n_classifiers, 
-                     question_no, tolerance=0.000001,
-                     convergence_epochs=5, 
-                     fit_type='one_vs_all', neg=1, pos=2, check_convergence=True):
-    '''
-    --------------------------------------
-    This is the main training loop for
-    the kernel perceptron algorithm.
-    --------------------------------------
-    '''
-    # Store a record of training and validation accuracies and other data from each epoch
-    history = {
-        "train_loss": [],
-        "val_loss": [],
-        "preds_train": [],
-        "preds_val": [],
-    }
-
-    # Store minimum loss for convergence check
-    min_loss = np.inf
-    convergence_counter = 0
+def setup_training(X_train, Y_train, X_val, Y_val, fit_type,  n_classifiers, d, kernel_type)
+    
 
     # Encoding for one vs. all
     if fit_type == 'one_vs_all':
@@ -74,10 +52,39 @@ def train_perceptron(X_train, Y_train,
     # Store this as a list of arrays: we don't want to repeat the lookup every time
     K_i = [K_train[i, :] for i in range(n_samples)]
 
+    return(K_i, )
+
+
+
+def train_perceptron(X_train, Y_train, 
+                     X_val, Y_val, epochs, 
+                     kernel_type, d, n_classifiers, 
+                     question_no, tolerance=0.000001,
+                     convergence_epochs=5, 
+                     fit_type='one_vs_all', neg=1, pos=2, check_convergence=True):
+    '''
+    --------------------------------------
+    This is the main training loop for
+    the kernel perceptron algorithm.
+    --------------------------------------
+    '''
+    # Store a record of training and validation accuracies and other data from each epoch
+    history = {
+        "train_loss": [],
+        "val_loss": [],
+        "preds_train": [],
+        "preds_val": [],
+    }
+
+    # Store minimum loss for convergence check
+    min_loss = np.inf
+    convergence_counter = 0
+
     # Initialize container for weights
     # Store the number of samples
     alpha = np.zeros((n_classifiers, K_train.shape[0]))
     
+    # Track mistakes here
     mistake_tracker = []
 
     # Run for a fixed user-specified number of epochs
