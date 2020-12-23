@@ -68,14 +68,17 @@ def train_perceptron(X_train, Y_train,
         K_train = helpers.get_gaussian_kernel(X_train, X_train, d)
         K_val = helpers.get_gaussian_kernel(X_train, X_val, d)
 
-    # Initialize container for weights
     # Store the number of samples
-    alpha = np.zeros((n_classifiers, K_train.shape[0]))
     n_samples = np.max(Y_train.shape)
-    mistake_tracker = []
 
     # Store this as a list of arrays: we don't want to repeat the lookup every time
     K_i = [K_train[i, :] for i in range(n_samples)]
+
+    # Initialize container for weights
+    # Store the number of samples
+    alpha = np.zeros((n_classifiers, K_train.shape[0]))
+    
+    mistake_tracker = []
 
     # Run for a fixed user-specified number of epochs
     for epoch in range(epochs):

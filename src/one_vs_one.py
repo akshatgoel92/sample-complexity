@@ -154,5 +154,4 @@ if __name__ == '__main__':
     }
 
   train_loss, val_loss = run_test_case(perceptron_args, n_classes, all_combinations)
-
   print(train_loss, val_loss)
