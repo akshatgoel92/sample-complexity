@@ -10,9 +10,6 @@ import matplotlib.pyplot as plt
 
 # Checks to do:
 # 1) Check CV method of averaging
-# 2) Change from loss to error everywhere
-# 3) Check how best to represent sum 
-# 4) Check how best to represent 
 
 # Potential report content
 # Talk about effect of dimensionality on overfitting
@@ -20,11 +17,8 @@ import matplotlib.pyplot as plt
 # Try to answer the question: for what values of C does Gaussian kernel mimic a polynomial kernel? 
 # Potentially make a plot for the above
 
-# Questions: 
-# Do we shuffle the data at each epoch?
 
-
-def setup_training(X_train, Y_train, X_val, Y_val, fit_type,  n_classifiers, d, kernel_type)
+def train_setup(X_train, Y_train, X_val, Y_val, fit_type,  n_classifiers, d, kernel_type):
     
 
     # Encoding for one vs. all
@@ -52,21 +46,22 @@ def setup_training(X_train, Y_train, X_val, Y_val, fit_type,  n_classifiers, d, 
     # Store this as a list of arrays: we don't want to repeat the lookup every time
     K_i = [K_train[i, :] for i in range(n_samples)]
 
-    return(K_i, )
+    # Return statement
+    return(Y_encoding, K_train, K_val, K_i, n_samples)
+
 
 
 
 def train_perceptron(X_train, Y_train, 
-                     X_val, Y_val, epochs, 
-                     kernel_type, d, n_classifiers, 
-                     question_no, tolerance=0.000001,
-                     convergence_epochs=5, 
-                     fit_type='one_vs_all', neg=1, pos=2, check_convergence=True):
+                     X_val, Y_val, epochs, n_classifiers, 
+                     question_no, convergence_epochs, fit_type, 
+                     check_convergence,
+                     Y_encoding, K_train, K_val, K_i, n_samples, 
+                     neg=1, pos=2):
     '''
     --------------------------------------
     This is the main training loop for
     the kernel perceptron algorithm.
-    --------------------------------------
     '''
     # Store a record of training and validation accuracies and other data from each epoch
     history = {
@@ -216,7 +211,9 @@ def get_final_predictions(alpha, K_examples, fit_type):
     return(Y_hat, preds)
 
 
-def run_test_case(epochs, kernel_type, d, n_classifiers, tolerance):
+
+def run_test_case(epochs, n_classifiers, question_no, convergence_epochs, fit_type, 
+                  check_convergence, kernel_type, d):
     '''
     --------------------------------------
     Execute the training steps above and generate
@@ -232,8 +229,13 @@ def run_test_case(epochs, kernel_type, d, n_classifiers, tolerance):
     Y_train = Y_train.astype(int)
     Y_val = Y_val.astype(int)
 
+    settings = train_setup(X_train, Y_train, 
+                           X_val, Y_val, fit_type, 
+                           n_classifiers, d, kernel_type)
+
     history = train_perceptron(X_train, Y_train, X_val, Y_val, epochs, 
-                               kernel_type, d, n_classifiers, tolerance)
+                               n_classifiers, question_no, convergence_epochs, fit_type, 
+                               check_convergence, *settings)
 
     return(history)
 
@@ -275,6 +277,10 @@ def run_multiple(params, data_args, kwargs, total_runs, question_no):
             X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, data_args['train_percent'])
             Y_train = Y_train.astype(int)
             Y_val = Y_val.astype(int)
+
+            Y_encoding, K_train, K_val, K_i, n_samples = train_setup(X_train, Y_train, 
+                                                                     X_val, Y_val, fit_type, 
+                                                                     n_classifiers, d, kernel_type)
 
             # Call the perceptron training with the given epochs
             # Return best epoch according to dev. loss and the associated accuracies on both datasets
@@ -458,17 +464,22 @@ if __name__ == '__main__':
     # Store test arguments
     test_args = {
 
-    'kernel_type': 'polynomial',
-    'n_classifiers': 3,
     'epochs':20,
+    'n_classifiers': 3,
+    'question_no': 'test.txt',
+    'convergence_epochs':5,
+    'fit_type': 'one_vs_all',
+    'check_convergence': True,
+    'kernel_type': 'polynomial',
     'd':3,
-    'tolerance': 0.0001,
+    
 
     }
 
     # Store kernel parameter list to iterate over
     params = [1, 2, 3, 4, 5, 6, 7]
 
+    
     # Store the arguments relating to the data set
     data_args = {
 
@@ -483,12 +494,12 @@ if __name__ == '__main__':
     multiple_run_args = {
     
         'epochs': 20, 
-        'kernel_type': 'polynomial', 
         'n_classifiers': 10,
-        'tolerance': 0.000001,
+        'question_no': '1.1',
         'convergence_epochs': 2,
-        'tolerance': 0.0000001, 
-        'fit_type': 'one_vs_all', 
+        'fit_type': 'one_vs_all',
+        'check_convergence': True,
+        'kernel_type': 'polynomial', 
     }
 
 
@@ -496,15 +507,15 @@ if __name__ == '__main__':
     cv_args = {
     
         'epochs': 18,
-        'kernel_type': 'polynomial', 
         'n_classifiers': 10, 
-        'tolerance':0.000001,
+        'question_no': '1.2',
         'convergence_epochs': 2,
         'fit_type': 'one_vs_all',
-        'check_convergence': False
-    
-    }
+        'check_convergence': False,
+        'kernel_type': 'polynomial', 
+        }
 
+    
     if run_test == 1:
         history = run_test_case(**test_args)
 
