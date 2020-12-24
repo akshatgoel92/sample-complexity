@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 # Potentially make a plot for the above
 
 
-def train_setup(X_train, Y_train, X_val, Y_val, fit_type,  n_classifiers, d, kernel_type):
+def train_setup(X_train, Y_train, X_val, Y_val, fit_type, n_classifiers, d, kernel_type):
     
 
     # Encoding for one vs. all
@@ -52,11 +52,11 @@ def train_setup(X_train, Y_train, X_val, Y_val, fit_type,  n_classifiers, d, ker
 
 
 
-def train_perceptron(X_train, Y_train, 
+def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples, 
+                     X_train, Y_train, 
                      X_val, Y_val, epochs, n_classifiers, 
                      question_no, convergence_epochs, fit_type, 
                      check_convergence,
-                     Y_encoding, K_train, K_val, K_i, n_samples, 
                      neg=1, pos=2):
     '''
     --------------------------------------
@@ -104,9 +104,9 @@ def train_perceptron(X_train, Y_train,
             preds_train.append(y_pred)
             
             # Update classifiers even if a single one makes a mistake
+            # Enforce uniqueness in the mistake tracker
             if np.sum(wrong) > 0:
                 mistake_tracker.append(i)
-                # Enforce uniqueness in the mistake tracker
                 mistake_tracker = list(set(mistake_tracker))
                 alpha[wrong, i] -= signs[wrong]
 
@@ -121,7 +121,7 @@ def train_perceptron(X_train, Y_train,
         msg = 'Train loss: {}, Epoch: {}'
         print(msg.format(train_loss, epoch))
         
-        # Check convergence if user specifies
+        # Check convergence if user specifies to check
         if check_convergence == True:
             
             if train_loss >= min_loss:
@@ -233,15 +233,16 @@ def run_test_case(epochs, n_classifiers, question_no, convergence_epochs, fit_ty
                            X_val, Y_val, fit_type, 
                            n_classifiers, d, kernel_type)
 
-    history = train_perceptron(X_train, Y_train, X_val, Y_val, epochs, 
+    history = train_perceptron(*settings, X_train, Y_train, X_val, Y_val, epochs, 
                                n_classifiers, question_no, convergence_epochs, fit_type, 
-                               check_convergence, *settings)
+                               check_convergence)
 
     return(history)
 
 
 
-def run_multiple(params, data_args, kwargs, total_runs, question_no):
+def run_multiple(params, data_args, epochs, n_classifiers, question_no, convergence_epochs, fit_type, 
+                 check_convergence, kernel_type, total_runs):
     '''
     --------------------------------------
     Run multiple runs of kernel 
@@ -255,7 +256,6 @@ def run_multiple(params, data_args, kwargs, total_runs, question_no):
     time_msg = "Elapsed time is....{} minutes"
     start = time.time()
 
-    
     for param in params:
 
         histories = {
@@ -275,16 +275,19 @@ def run_multiple(params, data_args, kwargs, total_runs, question_no):
             X, Y = helpers.shuffle_data(X, Y)
             
             X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, data_args['train_percent'])
+            
+            # Convert data to integer
             Y_train = Y_train.astype(int)
             Y_val = Y_val.astype(int)
 
-            Y_encoding, K_train, K_val, K_i, n_samples = train_setup(X_train, Y_train, 
-                                                                     X_val, Y_val, fit_type, 
-                                                                     n_classifiers, d, kernel_type)
+
+            settings = train_setup(X_train, Y_train,  X_val, Y_val, fit_type, n_classifiers, param, kernel_type)
+            history = train_perceptron(*settings, X_train, Y_train, X_val, Y_val, epochs, 
+                                        n_classifiers, question_no, convergence_epochs, fit_type, 
+                                        check_convergence)
 
             # Call the perceptron training with the given epochs
             # Return best epoch according to dev. loss and the associated accuracies on both datasets
-            history = train_perceptron(X_train, Y_train, X_val, Y_val, **kwargs, d=param, question_no=question_no)
             best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(history)
             
             # Store results
@@ -307,7 +310,9 @@ def run_multiple(params, data_args, kwargs, total_runs, question_no):
 
 
 
-def run_multiple_cv(params, data_args, kwargs, total_runs, question_no):
+
+def run_multiple_cv(params, data_args, epochs, n_classifiers, question_no, convergence_epochs, fit_type, 
+                    check_convergence, kernel_type, total_runs):
     '''
     --------------------------------------
     Check which kernel parameter results
@@ -344,14 +349,10 @@ def run_multiple_cv(params, data_args, kwargs, total_runs, question_no):
         # Divide into a list of folds
         X_folds, Y_folds = helpers.get_k_folds(X_train, Y_train, data_args['k'])
 
-        # Now iterate through the parameters
-        for param in params: 
+        # Each fold will go here
+        folds = []
 
-            # Store the history of each fold here
-            fold_histories = []
-    
-            # Now go through each fold : every fold becomes the hold-out set at least once
-            for fold_no in range(data_args['k']):
+        for fold_no in range(data_args['k']):
         
                 # Put in the x-values
                 X_train_fold = np.concatenate(X_folds[:fold_no] + X_folds[fold_no+1:])
@@ -360,16 +361,26 @@ def run_multiple_cv(params, data_args, kwargs, total_runs, question_no):
                 # Put in the Y values
                 Y_train_fold = np.concatenate(Y_folds[:fold_no] + Y_folds[fold_no+1:])
                 Y_val_fold =  Y_folds[fold_no]
-        
-                # Call the perceptron training with the given epochs
-                history = train_perceptron(X_train_fold, Y_train_fold, 
-                                           X_val_fold, Y_val_fold, **cv_args, 
-                                           question_no=question_no, d=param)
-        
-                # Append to the histories file the epoch by epoch record of each fold
-                fold_histories.append(history)
 
-            
+                # Append
+                folds.append([X_train_fold, Y_train_fold, X_val_fold, Y_val_fold])
+
+        # Now iterate through the parameters
+        for param in params:
+
+            # Print progress
+            print("This is run {} for parameter d = {}...".format(run, param))
+
+            # Get invariants per fold
+            settings_list = [train_setup(*fold, fit_type, n_classifiers, param, kernel_type) 
+                             for fold in folds]
+
+            # Now go through each fold : every fold becomes the hold-out set at least once
+            fold_histories = [train_perceptron(*settings, *fold, epochs, 
+                                               n_classifiers, question_no, 
+                                               convergence_epochs, fit_type, 
+                                               check_convergence) for settings, fold in zip(settings_list, folds)]
+        
             # Get avg. accuracies by epoch across folds
             avg_history = helpers.get_cv_results(fold_histories)
             best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(avg_history)
@@ -479,7 +490,6 @@ if __name__ == '__main__':
     # Store kernel parameter list to iterate over
     params = [1, 2, 3, 4, 5, 6, 7]
 
-    
     # Store the arguments relating to the data set
     data_args = {
 
@@ -499,7 +509,8 @@ if __name__ == '__main__':
         'convergence_epochs': 2,
         'fit_type': 'one_vs_all',
         'check_convergence': True,
-        'kernel_type': 'polynomial', 
+        'kernel_type': 'polynomial',
+        'total_runs': 20 
     }
 
 
@@ -512,7 +523,8 @@ if __name__ == '__main__':
         'convergence_epochs': 2,
         'fit_type': 'one_vs_all',
         'check_convergence': False,
-        'kernel_type': 'polynomial', 
+        'kernel_type': 'polynomial',
+        'total_runs': 20 
         }
 
     
@@ -520,7 +532,7 @@ if __name__ == '__main__':
         history = run_test_case(**test_args)
 
     if run_mul == 1:
-        run_multiple(params, data_args, multiple_run_args, total_runs, question_no)
+        run_multiple(params, data_args, **multiple_run_args)
 
     if run_cv == 1:
-        run_multiple_cv(params, data_args, cv_args, total_runs, question_no)
+        run_multiple_cv(params, data_args, **cv_args)
