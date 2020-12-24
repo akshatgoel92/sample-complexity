@@ -1,5 +1,4 @@
-
-from src.kernel_perceptron import *
+from kernel_perceptron import *
 
 
 
@@ -229,20 +228,24 @@ if __name__ == '__main__':
 
 
     parser = argparse.ArgumentParser(description='List the content of a folder')
+    
     parser.add_argument('question_no',
                          type=str, 
                          help='Specify the question number...')
     
     args = parser.parse_args()
+    
     question_no = args.question_no
 
 
     # Set random seed
     np.random.seed(13290138)
 
+    
     # Store kernel parameter list to iterate over
     params = [1, 2, 3, 4, 5, 6, 7]
 
+    
     # Store the arguments relating to the data set
     data_args = {
 
@@ -254,7 +257,7 @@ if __name__ == '__main__':
         }
 
 
-    if question_no == '1.1':
+    if question_no == 'test':
 
         # Store test arguments
         test_args = {
@@ -273,7 +276,7 @@ if __name__ == '__main__':
 
         history = run_test_case(**test_args)
 
-    if question_no == '1.2':
+    if question_no == '1.1':
 
 
         # Store arguments for this
@@ -291,7 +294,7 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if question_no == '1.3':
+    if question_no == '1.2':
 
         cv_args = {
     
@@ -300,6 +303,76 @@ if __name__ == '__main__':
             'question_no': '1.2',
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
+            'check_convergence': False,
+            'kernel_type': 'polynomial',
+            'total_runs': 20 
+        }
+
+        run_multiple_cv(params, data_args, **cv_args)
+
+
+    if question_no == '1.4':
+
+
+        # Store arguments for this
+        multiple_run_args = {
+    
+            'epochs': 20, 
+            'n_classifiers': 10,
+            'question_no': '1.1',
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': True,
+            'kernel_type': 'gaussian',
+            'total_runs': 20 
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+        
+        cv_args = {
+    
+            'epochs': 18,
+            'n_classifiers': 10, 
+            'question_no': '1.2',
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': False,
+            'kernel_type': 'gaussian',
+            'total_runs': 20 
+        }
+
+        run_multiple_cv(params, data_args, **cv_args)
+
+
+    if question_no == '1.4.1':
+
+
+        # Store arguments for this
+        multiple_run_args = {
+    
+            'epochs': 20, 
+            'n_classifiers': 10,
+            'question_no': '1.1',
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_one',
+            'check_convergence': True,
+            'kernel_type': 'polynomial',
+            'total_runs': 20 
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+
+    if question_no == '1.4.2':
+        
+        cv_args = {
+    
+            'epochs': 20,
+            'n_classifiers': 10, 
+            'question_no': '1.2',
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_one',
             'check_convergence': False,
             'kernel_type': 'polynomial',
             'total_runs': 20 

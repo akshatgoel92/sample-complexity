@@ -187,6 +187,7 @@ def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type):
     # For one vs. one this is the sign of prediction
     # We make a mistake if this does not equal the encoding
     elif fit_type == 'one_vs_one':
+        
         preds = signs[0]
         mistake = (preds != Y_encoding).astype(int)
         
