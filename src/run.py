@@ -305,14 +305,14 @@ if __name__ == '__main__':
 
         cv_args = {
     
-            'epochs': 2,
+            'epochs': 20,
             'n_classifiers': 10, 
             'question_no': '1.2',
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': False,
             'kernel_type': 'polynomial',
-            'total_runs': 2 
+            'total_runs': 20
         }
 
         run_multiple_cv(params, data_args, **cv_args)
