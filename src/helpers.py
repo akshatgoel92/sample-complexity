@@ -1,5 +1,6 @@
 # Import packages
 import os
+import datetime
 import pickle
 import numpy as np
 import pandas as pd 
@@ -83,20 +84,17 @@ def get_polynomial_kernel(X, X_, d):
 
 
 def get_gaussian_kernel(X, X_test, c):
-    '''
-    --------------------------
-    Input: X: Training matrix
+    '''Input: X: Training matrix
            X_test: Testing matrix
            sigma: Parameter for Kernel
     Output: Gaussian kernel matrix K(X, X_test)
-    
+    --------------------------
     This function computes the 
     Gaussian kernel matrix for X and X_test.
     It calls the pairwise distance function above
     to first create the matrix of distances. Then 
     It scales and exponentiates them to recover 
     the kernel values.
-    -------------------------
     '''
     K = np.einsum('ij,ij->i',X, X)[:,None] + np.einsum('ij,ij->i',X_test,X_test) - 2*np.dot(X,X_test.T)
     K = np.exp(K*-c)
@@ -276,7 +274,10 @@ def open_results(question_no):
     '''
     Open results according to question no.
     '''
-    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'rb') as f:
+    current_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    f_name = os.path.join('results', '{}_results_{}.txt'.format(question_no, current_time))
+    
+    with open(f_name, 'rb') as f:
         results = pickle.load(f)
 
     return(results)

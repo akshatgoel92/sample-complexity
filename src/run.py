@@ -276,7 +276,7 @@ if __name__ == '__main__':
 
         history = run_test_case(**test_args)
 
-    if question_no == '1.1':
+    if '1.1' in question_no:
 
 
         # Store arguments for this
@@ -294,7 +294,7 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if question_no == '1.2':
+    if '1.2' in question_no:
 
         cv_args = {
     
@@ -311,7 +311,7 @@ if __name__ == '__main__':
         run_multiple_cv(params, data_args, **cv_args)
 
 
-    if question_no == '1.4':
+    if '1.4' in question_no:
 
 
         # Store arguments for this
@@ -345,7 +345,7 @@ if __name__ == '__main__':
         run_multiple_cv(params, data_args, **cv_args)
 
 
-    if question_no == '1.4.1':
+    if '1.4.1' in question_no:
 
 
         # Store arguments for this
@@ -364,7 +364,7 @@ if __name__ == '__main__':
         run_multiple(params, data_args, **multiple_run_args)
 
 
-    if question_no == '1.4.2':
+    if '1.4.2' in question_no:
         
         cv_args = {
     
