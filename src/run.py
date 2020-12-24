@@ -8,7 +8,6 @@ def run_test_case(epochs, n_classifiers, question_no, convergence_epochs, fit_ty
     --------------------------------------
     Execute the training steps above and generate
     the results that have been specified in the report.
-    --------------------------------------
     '''
     X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
     X_val, Y_val = helpers.load_data("data", "dtest123.dat")
@@ -31,16 +30,21 @@ def run_test_case(epochs, n_classifiers, question_no, convergence_epochs, fit_ty
 
 
 
-def run_multiple(params, data_args, epochs, n_classifiers, question_no, convergence_epochs, fit_type, 
+def run_multiple(params, data_args, epochs, n_classifiers, 
+                 question_no, convergence_epochs, fit_type, 
                  check_convergence, kernel_type, total_runs):
     '''
-    --------------------------------------
     Run multiple runs of kernel 
     perceptron training with a given 
     set of parameters
     --------------------------------------
     '''
-    results = []
+    results = {'param': params,
+               'train_loss_mean': [],
+               'train_loss_std': [],
+               'val_loss_mean': [],
+               'val_loss_std': []}
+
     overall_run_no = 0
 
     time_msg = "Elapsed time is....{} minutes"
@@ -50,11 +54,10 @@ def run_multiple(params, data_args, epochs, n_classifiers, question_no, converge
 
         histories = {
         
-        'params': param, 
-        'history': [],
-        'best_epoch': [],
-        'best_training_loss': [],
-        'best_dev_loss': [],
+        'param': param, 
+        'train_loss': [],
+        'val_loss': []
+
         }
         
         for run in range(total_runs):
@@ -71,45 +74,53 @@ def run_multiple(params, data_args, epochs, n_classifiers, question_no, converge
             Y_val = Y_val.astype(int)
 
 
+            # Get setup for training
             settings = train_setup(X_train, Y_train,  X_val, Y_val, fit_type, n_classifiers, param, kernel_type)
+            
+            # Now train
             history = train_perceptron(*settings, X_train, Y_train, X_val, Y_val, epochs, 
                                         n_classifiers, question_no, convergence_epochs, fit_type, 
                                         check_convergence)
-
-            # Call the perceptron training with the given epochs
-            # Return best epoch according to dev. loss and the associated accuracies on both datasets
-            best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(history)
             
             # Store results
-            histories['best_training_loss'].append(best_training_loss)
-            histories['best_dev_loss'].append(best_dev_loss)
-            histories['best_epoch'].append(best_epoch)
-            histories['history'].append(history)
+            histories['train_loss'].append(history['train_loss'])
+            histories['val_loss'].append(history['val_loss'])
 
             overall_run_no += 1
-            print("This is overall run no {}".format(overall_run_no))
+            print("This is overall run no {} for parameter d = {}".format(overall_run_no, param))
             elapsed = (time.time() - start)/60
             print(time_msg.format(elapsed))
-        
-        # Store results
-        results.append(histories)
+
+        # Append results
+        results['train_loss_mean'].append(np.mean(np.array(histories['train_loss'])))
+        results['train_loss_std'].append(np.std(np.array(histories['train_loss'])))
+        results['val_loss_mean'].append(np.mean(np.array(histories['val_loss'])))
+        results['val_loss_std'].append(np.std(np.array(histories['val_loss'])))
+
+        print(results)
     
     helpers.save_experiment_results(results, question_no)
     
-    return(histories)
+    return(results)
 
 
 
 
-def run_multiple_cv(params, data_args, epochs, n_classifiers, question_no, convergence_epochs, fit_type, 
+def run_multiple_cv(params, data_args, epochs, n_classifiers, 
+                    question_no, convergence_epochs, fit_type, 
                     check_convergence, kernel_type, total_runs):
-    '''
-    --------------------------------------
-    Check which kernel parameter results
-    in highest validation loss
+    '''Check which kernel parameter results
+    in lowest validation loss
     --------------------------------------
     '''
-    results = []
+    
+    results = {'best_param': [],
+               'train_loss': [],
+               'test_loss': [],
+               'train_cf': [],
+               'test_cf': []
+               }
+    
     overall_run_no = 0
 
     time_msg = "Elapsed time is....{} minutes"
@@ -119,13 +130,10 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers, question_no, conve
 
 
         histories = {
-        
-            'params': params, 
-            'history': [],
-            'best_epoch': [],
-            'best_training_loss': [],
-            'best_dev_loss': [],
-            }
+                        'params': params,
+                        'train_loss': [],
+                        'val_loss': []
+                    }
 
         # Prepare data for the perceptron
         X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
@@ -172,52 +180,51 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers, question_no, conve
                                                check_convergence) for settings, fold in zip(settings_list, folds)]
         
             # Get avg. accuracies by epoch across folds
-            avg_history = helpers.get_cv_results(fold_histories)
-            best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(avg_history)
+            cv_train_loss, cv_val_loss = helpers.get_cv_results(fold_histories)
             
-            # Append history
-            histories['best_training_loss'].append(best_training_loss)
-            histories['best_dev_loss'].append(best_dev_loss)
-            histories['best_epoch'].append(best_epoch)
-            histories['history'].append(avg_history)
+            # Append to the histories dictionary
+            histories['train_loss'].append(cv_train_loss)
+            histories['val_loss'].append(cv_val_loss)
 
         # Get best parameter value
-        best_dev_config = np.argmin(np.array(histories['best_dev_loss']))
-        best_param = histories['params'][best_dev_config]
+        best_val_loss = np.argmin(np.array(histories['val_loss']))
+        best_param = histories['params'][best_val_loss]
 
         # Retrain
         print("Retraining now...")
         print("The best parameter is {}....".format(best_param))
 
+        retrain_settings = train_setup(X_train, Y_train, X_test, Y_test, 
+                                       fit_type, n_classifiers, best_param, kernel_type) 
+
         # We are ready to retrain
-        history = train_perceptron(X_train, Y_train, 
-                                   X_test, Y_test, 
-                                   **cv_args, d=best_param, question_no=question_no)
+        history = train_perceptron(*retrain_settings, 
+                                    X_train, Y_train, 
+                                    X_test, Y_test, 
+                                    epochs, n_classifiers, 
+                                    question_no, convergence_epochs, 
+                                    fit_type, check_convergence)
         
-        # Get retraining results
-        best_epoch, best_training_loss, best_dev_loss = helpers.get_best_results(history)
-        preds_train = history['preds_train'][best_epoch]
-        preds_test = history['preds_val'][best_epoch]
-        
-        # Update the results
-        histories['best_training_loss'] = [best_training_loss]
-        histories['best_dev_loss'] = [best_dev_loss]
-        histories['best_epoch'] = [best_epoch]
-        histories['params'] = best_param
-        histories['history'] = [history]
-        histories['train_cf'] = helpers.get_confusion_matrix(Y_train, preds_train)
-        histories['val_cf'] = helpers.get_confusion_matrix(Y_test, preds_test)
+        # Get retraining results and append
+        results['best_param'].append(best_param)
+        results['train_loss'].append(history['train_loss'])
+        results['test_loss'].append(history['val_loss'])
+        results['train_cf'].append(helpers.get_confusion_matrix(Y_train, history['preds_train']))
+        results['test_cf'].append(helpers.get_confusion_matrix(Y_test, history['preds_val']))
 
         overall_run_no += 1
         print("This is overall run no {}".format(overall_run_no))
         elapsed = (time.time() - start)/60
         print(time_msg.format(elapsed))
 
-        # Append the results
-        results.append(histories)
-
     # Save the results
     helpers.save_results(results, question_no)
+    
+    # Take the confusion matrix out before saving the table
+    results.pop('train_cf', None)
+    results.pop('test_cf', None)
+    
+    # Save the table as a .csv
     helpers.save_experiment_results(results, question_no)
     
     return(results)
@@ -242,7 +249,8 @@ if __name__ == '__main__':
 
     
     # Store kernel parameter list to iterate over
-    params = [1, 2, 3, 4, 5, 6, 7]
+    # params = [1, 2, 3, 4, 5, 6, 7]
+    params = [1, 2]
 
     
     # Store the arguments relating to the data set
@@ -288,7 +296,7 @@ if __name__ == '__main__':
             'fit_type': 'one_vs_all',
             'check_convergence': True,
             'kernel_type': 'polynomial',
-            'total_runs': 20 
+            'total_runs': 20
         }
 
         run_multiple(params, data_args, **multiple_run_args)
@@ -297,14 +305,14 @@ if __name__ == '__main__':
 
         cv_args = {
     
-            'epochs': 18,
+            'epochs': 2,
             'n_classifiers': 10, 
             'question_no': '1.2',
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': False,
             'kernel_type': 'polynomial',
-            'total_runs': 20 
+            'total_runs': 2 
         }
 
         run_multiple_cv(params, data_args, **cv_args)

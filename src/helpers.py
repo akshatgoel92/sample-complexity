@@ -178,6 +178,7 @@ def compute_final_cf(n_classes, question_no):
     return(cf)
 
 
+
 def get_loss_plot(results, lab, run_no, param):
   '''
   Convenience function to plot results
@@ -199,25 +200,6 @@ def get_loss_plot(results, lab, run_no, param):
   plt.clf()
 
 
-def get_best_results(history):
-    '''
-    This function takes in a 
-    dictionary containing an
-    epoch-wise record of training
-    and validation set binary losses
-    and returns the epoch at which the highest
-    binary accuracy was reached on the dev. set 
-    along with the associated losses on both
-    training and dev. set at that epoch.
-    '''
-    # Store results
-    best_epoch = np.array(history["val_loss"]).argmin()
-    best_training_loss = history['train_loss'][best_epoch]
-    best_dev_loss = history['val_loss'][best_epoch]
-
-    return(best_epoch, best_training_loss, best_dev_loss)
-
-
 
 def get_one_vs_all_encoding(Y_train, n_classes):
     '''
@@ -235,47 +217,18 @@ def save_results(results, question_no):
     '''
     Save results according to question no.
     '''
-    with open(os.path.join('results', '{}_results.txt'.format(question_no)), 'wb') as f:
+
+    id = len(os.listdir('results')) + 1
+    
+    with open(os.path.join('results', '{}_results_id_{}.txt'.format(question_no, id)), 'wb') as f:
         pickle.dump(results, f)
 
 
-
-def save_experiment_results(results, question_no):
-    '''
-    Save the results of an entire model selection run
-    '''
-
-    train_acc = []
-    test_acc = []
-    train_std = []
-    test_std = []
-    params = []
-
-    for result in results:
-        params.append(result['params'])
-        train_acc.append(np.mean(np.array(result['best_training_loss'])))
-        test_acc.append(np.mean(np.array(result['best_dev_loss'])))
-        train_std.append(np.std(np.array(result['best_training_loss'])))
-        test_std.append(np.std(np.array(result['best_dev_loss'])))
-
-    
-    results_df = pd.DataFrame([train_acc, train_std, test_acc, test_std], columns = [params], 
-                        index = ['Train Loss', 'Train SD', 'Test Loss',  'Test SD'])
-
-    results_df.to_csv(os.path.join("results", "table_{}.csv".format(question_no)))
-
-    # Print out results each time
-    print(results_df)
-
-    return(results_df)
-
-
-def open_results(question_no):
+def open_results(question_no, id):
     '''
     Open results according to question no.
     '''
-    current_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    f_name = os.path.join('results', '{}_results_{}.txt'.format(question_no, current_time))
+    f_name = os.path.join('results', '{}_results_id_{}.txt'.format(question_no, id))
     
     with open(f_name, 'rb') as f:
         results = pickle.load(f)
@@ -284,7 +237,24 @@ def open_results(question_no):
 
 
 
-def get_cv_results(histories):
+def save_experiment_results(results, question_no):
+    '''
+    Save the results of an entire model selection run
+    '''
+    id = len(os.listdir('results')) + 1
+
+    results_df = pd.DataFrame(results)
+
+    # Print out results each time
+    print(results_df)
+
+    results_df.to_csv(os.path.join("results", "table_{}_id_{}.csv".format(question_no, id)))
+
+    return(results_df)
+
+
+
+def get_cv_results(fold_histories):
     '''
     --------------------------------
     This function takes in a 
@@ -296,11 +266,10 @@ def get_cv_results(histories):
     every epoch across folds.
     --------------------------------
     '''
-    avg_history = {}
-    avg_history['train_loss'] = np.mean(np.array([history['train_loss'] for history in histories]), axis = 0)
-    avg_history['val_loss'] = np.mean(np.array([history['val_loss'] for history in histories]), axis = 0)
+    train_loss = np.mean(np.array([history['train_loss'] for history in fold_histories]))
+    val_loss = np.mean(np.array([history['val_loss'] for history in fold_histories]))
 
-    return(avg_history)
+    return(train_loss, val_loss)
 
 
 def sigmoid(x):

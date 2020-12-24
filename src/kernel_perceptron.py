@@ -63,14 +63,6 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
     This is the main training loop for
     the kernel perceptron algorithm.
     '''
-    # Store a record of training and validation accuracies and other data from each epoch
-    history = {
-        "train_loss": [],
-        "val_loss": [],
-        "preds_train": [],
-        "preds_val": [],
-    }
-
     # Store minimum loss for convergence check
     min_loss = np.inf
     convergence_counter = 0
@@ -114,10 +106,6 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
         # Get the training prediction with the updated weights
         train_loss = mistakes/n_samples
 
-        # Test the classifier
-        _, preds_val = get_final_predictions(alpha, K_val, fit_type)
-        val_loss = helpers.get_loss(Y_val, preds_val)
-
         # Print results
         msg = 'Train loss: {}, Epoch: {}'
         print(msg.format(train_loss, epoch))
@@ -135,23 +123,32 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
             if convergence_counter >= convergence_epochs or np.allclose(min_loss, 0):
                 break
 
-        # Store results
-        if fit_type == 'one_vs_all':
-            history['train_loss'].append(train_loss)
-            history['preds_train'].append(np.array(preds_train))
-            history['val_loss'].append(val_loss)
-            history['preds_val'].append(preds_val)
+    # Get final predictions and losses
+    # Still need to check if we can get rid of this
+    Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
+    Y_hat_val, preds_val = get_final_predictions(alpha, K_val, fit_type)
+
+    train_loss = helpers.get_loss(Y_train, preds_train)
+    val_loss = helpers.get_loss(Y_val, preds_val)
+
+    # Store results
+    if fit_type == 'one_vs_all':
+
+        # Store a record of training and validation accuracies and other data from each epoch
+        history = {
+            
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "preds_train": preds_train,
+            "preds_val": preds_val,
+        }
+
 
     if fit_type == 'one_vs_one':
         
         history = {}
-        
-        Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
-        Y_hat_val, preds_val = get_final_predictions(alpha, K_val, fit_type)
-
         history['Y_hat_train'] = Y_hat_train
         history['Y_hat_val'] = Y_hat_val
-
         history['preds_train'] = preds_train
         history['preds_val'] = preds_val
 
@@ -196,11 +193,10 @@ def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type):
 
 
 def get_final_predictions(alpha, K_examples, fit_type):
-    '''
-    Returns raw predictions and class predictions
+    '''Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
     '''
-    # Take the maximum argument in each column
+    
     Y_hat = alpha @ K_examples
     
     if fit_type == 'one_vs_all':
