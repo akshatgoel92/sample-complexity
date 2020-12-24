@@ -234,7 +234,6 @@ if __name__ == '__main__':
                          help='Specify the question number...')
     
     args = parser.parse_args()
-    
     question_no = args.question_no
 
 
