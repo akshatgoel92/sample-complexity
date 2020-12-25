@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 # Potentially make a plot for the above
 
 
-def train_setup(X_train, Y_train, X_val, Y_val, fit_type, n_classifiers, d, kernel_type):
+def train_setup(X_train, Y_train, X_val, Y_val, fit_type, n_classifiers, d, kernel_type, neg = 1, pos = 2):
     
 
     # Encoding for one vs. all
@@ -27,8 +27,7 @@ def train_setup(X_train, Y_train, X_val, Y_val, fit_type, n_classifiers, d, kern
     
     # Encoding for one vs. one
     elif fit_type == 'one_vs_one': 
-        Y_encoding = np.ones(len(Y_train), np.int32)
-        Y_encoding[Y_train == neg] = -1
+        Y_encoding = helpers.get_one_vs_one_encoding(Y_train, n_classifiers, neg, pos)
     
     # Get polynomial kernel
     if kernel_type == 'polynomial':

@@ -205,12 +205,25 @@ def get_one_vs_all_encoding(Y_train, n_classes):
     '''
     --------------------------------------
     Get one hot encoded labels for 1 vs. all
-    --------------------------------------
     '''
     Y = np.full(Y_train.size*n_classes, -1).reshape(Y_train.size, n_classes)
     Y[np.arange(Y_train.size), Y_train] = 1
 
     return(Y)
+
+
+def get_one_vs_one_encoding(Y_train, n_classifiers, neg, pos):
+    '''
+    --------------------------------------
+    Get one hot encoded labels for 1 vs. 1
+    --------------------------------------
+    '''
+    
+    Y_encoding = np.ones(len(Y_train))
+    Y_encoding[(Y_train == neg)] = -1
+    print(Y_encoding)
+
+    return(Y_encoding)
 
 
 def save_results(results, question_no):

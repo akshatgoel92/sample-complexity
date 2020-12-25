@@ -45,11 +45,18 @@ def run_multiple(params, data_args, epochs, n_classifiers,
                'val_loss_mean': [],
                'val_loss_std': []}
 
-    overall_run_no = 0
+    
+    # Load data
+    X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
 
+
+    # Start timer
+    overall_run_no = 0
     time_msg = "Elapsed time is....{} minutes"
     start = time.time()
 
+    
+    # Start run
     for param in params:
 
         histories = {
@@ -64,15 +71,14 @@ def run_multiple(params, data_args, epochs, n_classifiers,
             # Prepare data for the perceptron
             # Shuffle the dataset before splitting it
             # Split the data into training and validation set 
-            X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
-            X, Y = helpers.shuffle_data(X, Y)
             
-            X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, data_args['train_percent'])
+            X_shuffle, Y_shuffle = helpers.shuffle_data(X, Y)
+            
+            X_train, X_val, Y_train, Y_val = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
             
             # Convert data to integer
             Y_train = Y_train.astype(int)
             Y_val = Y_val.astype(int)
-
 
             # Get setup for training
             settings = train_setup(X_train, Y_train,  X_val, Y_val, fit_type, n_classifiers, param, kernel_type)
@@ -121,6 +127,8 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
                'test_cf': []
                }
     
+    
+    X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
     overall_run_no = 0
 
     time_msg = "Elapsed time is....{} minutes"
@@ -136,11 +144,10 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
                     }
 
         # Prepare data for the perceptron
-        X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
-        X, Y = helpers.shuffle_data(X, Y)
+        X_shuffle, Y_shuffle = helpers.shuffle_data(X, Y)
 
         # Split into training and validation set
-        X_train, X_test, Y_train, Y_test = helpers.split_data(X, Y, data_args['train_percent'])
+        X_train, X_test, Y_train, Y_test = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
         Y_train = Y_train.astype(int)
         Y_test = Y_test.astype(int)
         
@@ -249,8 +256,7 @@ if __name__ == '__main__':
 
     
     # Store kernel parameter list to iterate over
-    # params = [1, 2, 3, 4, 5, 6, 7]
-    params = [1, 2]
+    params = [1, 2, 3, 4, 5, 6, 7]
 
     
     # Store the arguments relating to the data set
