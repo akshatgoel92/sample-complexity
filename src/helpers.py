@@ -221,8 +221,7 @@ def get_one_vs_one_encoding(Y_train, n_classifiers, neg, pos):
     
     Y_encoding = np.ones(len(Y_train))
     Y_encoding[(Y_train == neg)] = -1
-    print(Y_encoding)
-
+    
     return(Y_encoding)
 
 
