@@ -1,7 +1,8 @@
 import numpy as np
+import helpers
 
 
-def get_pairwise_dist(A, B):
+def get_dist(X, Y):
     '''
     --------------------------
     Load data from source
@@ -22,23 +23,68 @@ def get_pairwise_dist(A, B):
     # 1) Element wise product and then sum horizontally
     # 1) Element wise product and then sum horizontally
     # 2) Dot product between A and B.T
-    dist = np.einsum('ij,ij->i',A, A)[:,None] + np.einsum('ij,ij->i',B,B) - 2*np.dot(A,B.T)
+    dist = np.sqrt(np.einsum('ij,ij->i',X, X)[:,None] + np.einsum('ij,ij->i',Y,Y) - 2*np.dot(X,Y.T))
     return(dist)
 
 
 
-def one_nearest_neighbor(X_train, Y_train, X_val, Y_val, epochs, lr):
+def train_one_nn(X_train, Y_train, X_val, Y_val):
 
     predictions = []
+    distance = get_dist(X_val, X_train)
+    n_val_samples = X_val.shape[0]
 
-    for i in range(X_val.shape[0]):
-
-        distance = get_euclidean_distance(X_val[i, :], X_train)
-        neighbors = np.argmin(distance)
+    for i in range(n_val_samples):
+        
+        neighbors = np.where(distance[i] == np.min(distance[i]))
         labels = Y_train[neighbors]
         prediction = np.sign(np.sum(labels))
         
         if prediction == 0: prediction.append(np.random.choice([1, -1]))
         else: predictions.append(prediction)
 
-    return(np.array(prediction))
+    return(np.array(predictions))
+
+
+
+def get_one_nn(m, n):
+    '''
+    --------------------
+    Run perceptron algorithm to get a base-line
+    --------------------
+    Parameters: 
+    X: Numpy array of training features (shape = 784 X n)
+    y: Binary (1/0) training label (shape = n X 1)
+    --------------------
+    Output: 
+    w: trained weights
+    y_preds: predictions
+    --------------------
+    '''
+    # Set the random seed for np.random number generator
+    # This will make sure results are reproducible
+    
+    
+    # Prepare data for the perceptron
+    X, Y = helpers.get_binary_data(m, n)
+
+    # 
+    X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, 0.8)
+    
+    # Call the perceptron training with the given epochs
+    history = train_one_nn(X_train, Y_train, X_val, Y_val)
+    
+    # Return statement
+    return(history)
+
+
+if __name__ == '__main__':
+
+    np.random.seed(132089)
+    
+    # Set parameters
+    m = 100
+    n = 4
+    
+    # Call training function
+    history = get_one_nn(m, n)
