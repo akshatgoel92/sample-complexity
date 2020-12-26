@@ -218,7 +218,6 @@ def get_one_vs_one_encoding(Y_train, n_classifiers, neg, pos):
     Get one hot encoded labels for 1 vs. 1
     --------------------------------------
     '''
-    
     Y_encoding = np.ones(len(Y_train))
     Y_encoding[(Y_train == neg)] = -1
     
@@ -295,3 +294,13 @@ def sigmoid(x):
 
 def sigmoid_derivative():
     pass
+
+
+def get_binary_data(m, n):
+    '''
+    Get the data for part 2 
+    '''
+    X = np.random.choice([-1, 1], size = (m,n))
+    Y = X[:, 0]
+
+    return(X, Y)

@@ -1,6 +1,5 @@
 # Import packages
-from helpers import load_all_data, vectorized_flatten, sigmoid, get_log_loss, get_accuracy , shuffle_data
-from helpers import sigmoid_derivative, gradient_update, plot_loss, prep_data
+import helpers
 import numpy as np
 
 
@@ -21,7 +20,7 @@ def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
     --------------------
     '''
     # Initialize weights and biases
-    w = np.zeros(X.shape[0])
+    w = np.zeros(X.shape[1])
     b = 0
     
     # History goes here
@@ -40,11 +39,11 @@ def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
     for epoch in range(epochs):
         
         # Do this for each example in the dataset
-        for i in range(X.shape[1]):
+        for i in range(X.shape[0]):
 
             # Store the sample data
-            x_i = X[:, i]
-            y_i = Y[0][i]
+            x_i = X[i, :]
+            y_i = Y[i]
             
             # Compute the prediction with the current weights
             if (np.dot(w, x_i) + b > 0): y_hat = 1
@@ -60,28 +59,28 @@ def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
             
             
         # Get predictions on train and test
-        y_train_preds = np.array([int(np.dot(w, X[:, i]) + b  > 0) for i in range(X.shape[1])])
-        y_dev_preds = np.array([int(np.dot(w, X_dev[:, i]) + b  > 0) for i in range(X_dev.shape[1])])
+        y_train_preds = np.array([int(np.dot(w, X[i, :]) + b  > 0) for i in range(X.shape[0])])
+        y_dev_preds = np.array([int(np.dot(w, X_dev[i, :]) + b  > 0) for i in range(X_dev.shape[0])])
         
         # Training accuracy                       
-        accuracy = get_accuracy(Y, y_train_preds)
-        dev_accuracy = get_accuracy(y_dev, y_dev_preds)
-        print("Epoch {}/{}: Training_accuracy = {}, Dev. Accuracy = {}".format(epoch, epochs, accuracy, dev_accuracy))
+        train_loss = helpers.get_loss(Y, y_train_preds)
+        val_loss = helpers.get_loss(y_dev, y_dev_preds)
+        print("Epoch {}/{}: Training loss = {}, Val. loss = {}".format(epoch, epochs, train_loss, val_loss))
          
         # Append results to history
         history["biases"].append(b)
         history["weights"].append(w)
-        history["accuracies"].append(accuracy)
-        history["dev_accuracies"].append(dev_accuracy)
+        history["accuracies"].append(train_loss)
+        history["dev_accuracies"].append(val_loss)
         
         # Get training accuracy
-        print("Epoch {}/{}: Training_accuracy = {}".format(epoch, epochs, accuracy))
+        print("Epoch {}/{}: Training Loss = {}".format(epoch, epochs, train_loss))
     
     # Return statement
     return(history)
 
 
-def get_perceptron_baseline(data_path, epochs, lr):
+def get_perceptron_baseline(m, n, epochs, lr):
     '''
     --------------------
     Run perceptron algorithm to get a base-line
@@ -100,16 +99,16 @@ def get_perceptron_baseline(data_path, epochs, lr):
     
     
     # Prepare data for the perceptron
-    X_train_flattened, X_dev_flattened, X_test_flattened, y_train, y_dev, y_test = prep_data(data_path)
+    X, Y = helpers.get_binary_data(m, n)
+
+    # 
+    X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, 0.8)
     
     # Call the perceptron training with the given epochs
-    history = train_perceptron(X_train_flattened, y_train, X_dev_flattened, y_dev, epochs, lr)
-    
-    # Get results from history
-    best_epoch, best_training_accuracy, best_dev_accuracy = get_results(history)
+    history = train_perceptron(X_train, Y_train, X_val, Y_val, epochs, lr)
     
     # Return statement
-    return(best_epoch, best_training_accuracy, best_dev_accuracy, history)
+    return(history)
 
 
 if __name__ == '__main__':
@@ -117,10 +116,10 @@ if __name__ == '__main__':
     np.random.seed(132089)
     
     # Set parameters
-    data_path = '../setup/data'
+    m = 100000
+    n = 4
     epochs = 1000
-    lr = 0.6
+    lr = 1
 
     # Call training function
-    best_epoch, best_accuracy, best_loss, history = get_perceptron_baseline(data_path, epochs, lr)
-
+    history = get_perceptron_baseline(m, n, epochs, lr)
