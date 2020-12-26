@@ -53,20 +53,14 @@ def train_perceptron(X, Y, X_val, Y_val, epochs, lr):
             # If it is not correct then we do the following: 
             # 1) Update the weights and biases in the direction of the label
             if y_hat != y_i:
-                print(w)
-                print((y_i - y_hat)*x_i)
                 w += (y_i - y_hat)*x_i
                 b += (y_i - y_hat)
-                print(w)
+                
             
             
         # Get predictions on train and test
         y_train_preds = np.sign(np.dot(X, w))
         y_val_preds = np.sign(np.dot(X_val, w))
-
-        print(y_train_preds.shape)
-        print(Y_train.shape)
-        print(y_val_preds.shape)
 
 
         
@@ -122,15 +116,17 @@ def get_perceptron_baseline(m, n, epochs, lr):
     return(history)
 
 
+
+
 if __name__ == '__main__':
 
     np.random.seed(132089)
     
     # Set parameters
     epochs = 20
-    m = 1000
+    m = 3
     lr = 1
-    n = 4
+    n = 12
     
     # Call training function
     history = get_perceptron_baseline(m, n, epochs, lr)
