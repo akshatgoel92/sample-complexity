@@ -4,7 +4,7 @@ import numpy as np
 
 
 
-def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
+def train_perceptron(X, Y, X_val, Y_val, epochs, lr):
     '''
     --------------------
     Perceptron algorithm
@@ -28,12 +28,10 @@ def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
         "weights": [w],
         "losses": [], 
         "biases": [b],
-        "accuracies": [],
-        "dev_accuracies": []
+        "train_loss": [],
+        "val_loss": []
     }
     
-    # Best accuracy
-    best_accuracy = 0
     
     # Run for a fixed number of epochs
     for epoch in range(epochs):
@@ -44,9 +42,10 @@ def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
             # Store the sample data
             x_i = X[i, :]
             y_i = Y[i]
+
             
             # Compute the prediction with the current weights
-            if (np.dot(w, x_i) + b > 0): y_hat = 1
+            if (np.dot(w, x_i) > 0): y_hat = 1
             else: y_hat = -1
             
             # Check if the prediction is correct against the labels
@@ -54,24 +53,36 @@ def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
             # If it is not correct then we do the following: 
             # 1) Update the weights and biases in the direction of the label
             if y_hat != y_i:
-                w += lr*(y_i - y_hat)*x_i
-                b += lr*(y_i - y_hat)
+                print(w)
+                print((y_i - y_hat)*x_i)
+                w += (y_i - y_hat)*x_i
+                b += (y_i - y_hat)
+                print(w)
             
             
         # Get predictions on train and test
-        y_train_preds = np.array([int(np.dot(w, X[i, :]) + b  > 0) for i in range(X.shape[0])])
-        y_dev_preds = np.array([int(np.dot(w, X_dev[i, :]) + b  > 0) for i in range(X_dev.shape[0])])
+        y_train_preds = np.sign(np.dot(X, w))
+        y_val_preds = np.sign(np.dot(X_val, w))
+
+        print(y_train_preds.shape)
+        print(Y_train.shape)
+        print(y_val_preds.shape)
+
+
         
         # Training accuracy                       
-        train_loss = helpers.get_loss(Y, y_train_preds)
-        val_loss = helpers.get_loss(y_dev, y_dev_preds)
+        
+        train_loss = (Y != y_train_preds).sum()
+        val_loss = (Y_val != y_val_preds).sum()
+        # train_loss = helpers.get_loss(Y, y_train_preds)
+        # val_loss = helpers.get_loss(Y_val, y_val_preds)
         print("Epoch {}/{}: Training loss = {}, Val. loss = {}".format(epoch, epochs, train_loss, val_loss))
          
         # Append results to history
         history["biases"].append(b)
         history["weights"].append(w)
-        history["accuracies"].append(train_loss)
-        history["dev_accuracies"].append(val_loss)
+        history["train_loss"].append(train_loss)
+        history["val_loss"].append(val_loss)
         
         # Get training accuracy
         print("Epoch {}/{}: Training Loss = {}".format(epoch, epochs, train_loss))
@@ -116,10 +127,10 @@ if __name__ == '__main__':
     np.random.seed(132089)
     
     # Set parameters
-    m = 100000
-    n = 4
-    epochs = 1000
+    epochs = 20
+    m = 1000
     lr = 1
-
+    n = 4
+    
     # Call training function
     history = get_perceptron_baseline(m, n, epochs, lr)
