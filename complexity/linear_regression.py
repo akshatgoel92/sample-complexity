@@ -1,58 +1,10 @@
-#!/usr/bin/env python
-# coding: utf-8
 # Import packages
 import os
-import math
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+import helpers
 
 
-
-
-def get_data():
-    '''
-    ------------------------
-    Input: None
-    Output: Assignment data
-    This function generates
-    the assignment data for 
-    Q 1.1
-    ------------------------
-    '''
-    return np.array([1, 2, 3, 4]), np.array([3, 2, 0, 5])  
-
-
-def get_sol(X, Y):
-    '''
-    ------------------------
-    Input: Polynomial features
-    Output: Least squares solution
-    This calculates the analytical
-    solution for least squares given
-    X features and Y labels
-    This is reused by overfitting.py
-    for the overfitting section of the
-    assignment
-    ------------------------
-    '''
-    return np.linalg.solve(X.T @ X, X.T @ Y)
-
-
-def get_predictions(X, beta_hat):
-    '''
-    ------------------------
-    Input: 
-           1) X: feature values for prediction points
-           2) beta_hat: Least squares coefficients to use
-                        for predictions
-    Output: Predictions
-    ------------------------
-    '''
-    return X @ beta_hat
-
-
-def run_regression(k, x, y):
+def train_regression(X_train, Y_train, X_val, Y_val):
     '''
     ------------------------
     Input: k: Dimension of basis
@@ -63,38 +15,59 @@ def run_regression(k, x, y):
     dimension k on x and y
     ------------------------
     ''' 
-    phi_x = get_polynomial_basis(x, k)
-    beta_hat = get_sol(phi_x, y)
-    y_hat = get_predictions(phi_x, beta_hat)
+    beta_hat = np.linalg.pinv(X_train) @ Y_train
     
-    mse = get_mse(y, y_hat)
-    ln_mse = get_ln_mse(mse)
+    y_hat_train = np.sign(X_train @ beta_hat)
+    y_hat_train[y_hat_train == 0] = -1
+
+    y_hat_val = np.sign(X_val @ beta_hat)
+    y_hat_val[y_hat_val == 0] = -1
     
-    results = {'beta_hat': beta_hat, 'y_hat': y_hat, 
-               'mse': mse, 'ln_mse': ln_mse, 
-               'degree': k-1, 'dim': k}
+    train_loss = helpers.get_loss(Y_train, y_hat_train)
+    val_loss = helpers.get_loss(Y_val, y_hat_val)
     
-    return(results)
+    return(train_loss, val_loss)
 
 
-def get_final_results(results):
+
+def get_regression(m, n):
     '''
-    ------------------------
-    Input: Results dictionary
-    Output: Dataframe with two columns:
-    Degree and MSE
-    This is a convenience function
-    to display results in an easily 
-    readable way.
-    ------------------------
+    --------------------
+    Run linear regression algorithm to get a base-line
+    --------------------
+    Parameters: 
+    X: Numpy array of training features (shape = 784 X n)
+    y: Binary (1/0) training label (shape = n X 1)
+    --------------------
+    Output: 
+    w: trained weights
+    y_preds: predictions
+    --------------------
     '''
-    mse = pd.DataFrame([result['mse'] for result in results], columns = ['MSE'])
-    mse['degree'] = [result['degree'] for result in results]
-    mse.set_index('degree', inplace = True)
+    # Set the random seed for np.random number generator
+    # This will make sure results are reproducible
     
-    return(mse)
+    # Prepare data for the perceptron
+    X, Y = helpers.get_binary_data(m, n)
 
+    # 
+    X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, 0.8)
+    
+    # Call the perceptron training with the given epochs
+    history = train_regression(X_train, Y_train, X_val, Y_val)
+    
+    # Return statement
+    return(history)
 
 
 if __name__ == '__main__':
-    main()
+    
+    np.random.seed(102938120)
+
+    # Set parameters
+    m = 10
+    n = 1000
+    
+    # Call training function
+    history = get_regression(m, n)
+    print(history)
