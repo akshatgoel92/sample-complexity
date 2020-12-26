@@ -36,6 +36,8 @@ def train_perceptron(X, Y, X_val, Y_val, epochs, lr):
     # Run for a fixed number of epochs
     for epoch in range(epochs):
         
+        mistakes=0
+
         # Do this for each example in the dataset
         for i in range(X.shape[0]):
 
@@ -53,23 +55,23 @@ def train_perceptron(X, Y, X_val, Y_val, epochs, lr):
             # If it is not correct then we do the following: 
             # 1) Update the weights and biases in the direction of the label
             if y_hat != y_i:
+                mistakes+=1
+                print(mistakes)
                 w += (y_i - y_hat)*x_i
                 b += (y_i - y_hat)
                 
             
             
         # Get predictions on train and test
-        y_train_preds = np.sign(np.dot(X, w))
-        y_val_preds = np.sign(np.dot(X_val, w))
-
-
+        y_train_preds = np.sign(np.dot(X, w) + b)
+        y_train_preds[y_train_preds==0] = -1
         
-        # Training accuracy                       
-        
-        train_loss = (Y != y_train_preds).sum()
-        val_loss = (Y_val != y_val_preds).sum()
-        # train_loss = helpers.get_loss(Y, y_train_preds)
-        # val_loss = helpers.get_loss(Y_val, y_val_preds)
+        y_val_preds = np.sign(np.dot(X_val, w) + b)
+        y_val_preds[y_val_preds==0] = -1
+
+        # Training accuracy
+        train_loss = helpers.get_loss(Y, y_train_preds)
+        val_loss = helpers.get_loss(Y_val, y_val_preds)
         print("Epoch {}/{}: Training loss = {}, Val. loss = {}".format(epoch, epochs, train_loss, val_loss))
          
         # Append results to history
@@ -124,9 +126,9 @@ if __name__ == '__main__':
     
     # Set parameters
     epochs = 20
-    m = 3
+    m = 10000
     lr = 1
-    n = 12
+    n = 30
     
     # Call training function
     history = get_perceptron_baseline(m, n, epochs, lr)
