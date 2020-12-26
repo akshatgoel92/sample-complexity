@@ -39,8 +39,6 @@ def train_perceptron(X, Y, X_dev, y_dev, epochs, lr):
     # Run for a fixed number of epochs
     for epoch in range(epochs):
         
-        X, Y = shuffle_data(X, Y)
-        
         # Do this for each example in the dataset
         for i in range(X.shape[1]):
 
@@ -122,7 +120,7 @@ if __name__ == '__main__':
     data_path = '../setup/data'
     epochs = 1000
     lr = 0.6
-    
+
     # Call training function
     best_epoch, best_accuracy, best_loss, history = get_perceptron_baseline(data_path, epochs, lr)
 
