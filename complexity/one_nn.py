@@ -31,17 +31,22 @@ def get_dist(X, Y):
 def train_one_nn(X_train, Y_train, X_val, Y_val):
 
     predictions = []
+    
     distance = get_dist(X_val, X_train)
+    
     n_val_samples = X_val.shape[0]
 
     for i in range(n_val_samples):
         
-        neighbors = np.where(distance[i] == np.min(distance[i]))
-        labels = Y_train[neighbors]
+        labels = Y_train[np.where(distance[i] == np.min(distance[i]))]
         prediction = np.sign(np.sum(labels))
         
-        if prediction == 0: prediction.append(np.random.choice([1, -1]))
-        else: predictions.append(prediction)
+        # Add
+        if prediction == 0: 
+            prediction.append(np.random.choice([1, -1]))
+        
+        else: 
+            predictions.append(prediction)
 
     return(np.array(predictions))
 
