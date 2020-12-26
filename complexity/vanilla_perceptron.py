@@ -47,7 +47,7 @@ def train_perceptron(X, Y, X_val, Y_val, epochs, lr):
 
             
             # Compute the prediction with the current weights
-            if (np.dot(w, x_i) > 0): y_hat = 1
+            if (np.dot(w, x_i) + b > 0): y_hat = 1
             else: y_hat = -1
             
             # Check if the prediction is correct against the labels
