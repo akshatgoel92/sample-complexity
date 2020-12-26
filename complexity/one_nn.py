@@ -29,26 +29,40 @@ def get_dist(X, Y):
 
 
 def train_one_nn(X_train, Y_train, X_val, Y_val):
-
+    '''
+    Train one nearest neighbor
+    '''
+    # Initialize empty matrix
     predictions = []
-    
+
+    # Calculate distance between validation point and each training point
     distance = get_dist(X_val, X_train)
     
+    # Store no. of validation samples
     n_val_samples = X_val.shape[0]
 
+    # Loop through validation samples
     for i in range(n_val_samples):
         
+        # Labels of nearest neighbors
         labels = Y_train[np.where(distance[i] == np.min(distance[i]))]
+        
+        # Predictions based on nearest neighbor labels
         prediction = np.sign(np.sum(labels))
         
-        # Add
+        # Add prediction to sequence
         if prediction == 0: 
             prediction.append(np.random.choice([1, -1]))
         
         else: 
             predictions.append(prediction)
 
-    return(np.array(predictions))
+    predictions = np.array(predictions)
+
+    # Calculate validation loss
+    val_loss = helpers.get_loss(Y_val, predictions)
+
+    return(val_loss)
 
 
 
@@ -93,3 +107,4 @@ if __name__ == '__main__':
     
     # Call training function
     history = get_one_nn(m, n)
+    print(history)
