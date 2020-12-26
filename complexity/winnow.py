@@ -20,8 +20,8 @@ def train_winnow(X, Y, X_val, Y_val, epochs, lr):
     --------------------
     '''
     # Initialize weights and biases
-    w = np.zeros(X.shape[1])
-    b = 0
+    w = np.ones(X.shape[1])
+    b = 1
     
     # History goes here
     history = {
@@ -50,8 +50,8 @@ def train_winnow(X, Y, X_val, Y_val, epochs, lr):
 
             
             # Compute the prediction with the current weights
-            if (np.dot(w, x_i) + b < n): y_hat = 0
-            else: y_hat = 1
+            if (np.dot(w, x_i) + b >= n): y_hat = 1
+            else: y_hat = 0
             
             # Check if the prediction is correct against the labels
             # If it is correct we don't need to make any updates: we just move to the next iteration
@@ -65,17 +65,12 @@ def train_winnow(X, Y, X_val, Y_val, epochs, lr):
             
         # Get predictions on train and test
         y_train_preds = ((np.dot(X, w) + b) >= n).astype(int)
-        print(y_train_preds)
-
         y_val_preds = ((np.dot(X, w) + b) >= n).astype(int)
-        print(y_val_preds)
+        
 
         # Change encoding back
         y_train_preds[y_train_preds==0] = -1
         y_val_preds[y_val_preds==0] = -1
-
-        print(y_train_preds)
-        print(y_val_preds)
 
         # Training accuracy
         train_loss = helpers.get_loss(Y, y_train_preds)
