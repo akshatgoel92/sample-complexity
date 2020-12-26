@@ -45,7 +45,8 @@ def train_winnow(X, Y, X_val, Y_val, epochs, lr):
             x_i = X[i, :]
             y_i = Y[i]
 
-            y_i = 0 if yt == -1
+            if y_i == -1:
+                y_i = 0 
 
             
             # Compute the prediction with the current weights
@@ -57,18 +58,24 @@ def train_winnow(X, Y, X_val, Y_val, epochs, lr):
             # If it is not correct then we do the following: 
             # 1) Update the weights and biases in the direction of the label
             if y_hat != y_i:
-                w *= np.power(2, (y_i - y_hat)*x_i)
-                b *= np.power(2, (y_i - y_hat))
+                w *= np.power(2.0, (y_i - y_hat)*x_i)
+                b *= np.power(2.0, (y_i - y_hat))
                 
             
             
         # Get predictions on train and test
-        y_train_preds = (np.dot(X_train, w) + b) >= n
-        y_val_preds = (np.dot(X_train, w) + b) >= n
-        
+        y_train_preds = ((np.dot(X, w) + b) >= n).astype(int)
+        print(y_train_preds)
+
+        y_val_preds = ((np.dot(X, w) + b) >= n).astype(int)
+        print(y_val_preds)
+
         # Change encoding back
         y_train_preds[y_train_preds==0] = -1
         y_val_preds[y_val_preds==0] = -1
+
+        print(y_train_preds)
+        print(y_val_preds)
 
         # Training accuracy
         train_loss = helpers.get_loss(Y, y_train_preds)
@@ -113,7 +120,7 @@ def get_winnow(m, n, epochs, lr):
     X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, 0.8)
     
     # Call the perceptron training with the given epochs
-    history = train(X_train, Y_train, X_val, Y_val, epochs, lr)
+    history = train_winnow(X_train, Y_train, X_val, Y_val, epochs, lr)
     
     # Return statement
     return(history)
@@ -132,4 +139,4 @@ if __name__ == '__main__':
     n = 30
     
     # Call training function
-    history = get_perceptron_baseline(m, n, epochs, lr)
+    history = get_winnow(m, n, epochs, lr)
