@@ -95,9 +95,14 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
       train_total_confidences, val_total_confidences, train_votes, val_votes = results
 
   print(train_votes[:, :10])
+  print(val_votes[:, :10])
   # Return predictions
   train_preds = np.argmax(train_votes, axis = 0)
+  print(train_preds[:10])
+  print(Y_train[:10])
   val_preds = np.argmax(val_votes, axis = 0)
+  print(val_preds[:10])
+  print(Y_val[:10])
 
   train_loss = helpers.get_loss(train_preds, Y_train)
   val_loss = helpers.get_loss(val_preds, Y_val)
@@ -293,7 +298,7 @@ if __name__ == '__main__':
   if question_no == 'multiple':
 
       # Store kernel parameter list to iterate over
-      params = [4]
+      params = [1]
 
       # Store the arguments relating to the data set
       data_args = {
