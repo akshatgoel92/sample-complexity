@@ -318,7 +318,7 @@ if __name__ == '__main__':
         # Store test arguments
         test_args = {
 
-            'epochs':5,
+            'epochs':3,
             'n_classifiers': 3,
             'question_no': 'test.txt',
             'convergence_epochs':5,
