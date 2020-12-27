@@ -103,11 +103,15 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
                 alpha[wrong, i] -= signs[wrong]
 
         # Get the training prediction with the updated weights
-        train_loss = mistakes/n_samples
+        mistake_percent = mistakes/n_samples
+        
+        # Get predictions and measure training loss
+        Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
+        train_loss = helpers.get_loss(Y_train, preds_train)
 
         # Print results
-        msg = 'Train loss: {}, Epoch: {}'
-        print(msg.format(train_loss, epoch))
+        msg = 'Train loss: {}, Online mistakes: {}, Epoch: {}'
+        print(msg.format(train_loss, mistake_percent, epoch))
         
         # Check convergence if user specifies to check
         if check_convergence == True:
