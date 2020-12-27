@@ -111,7 +111,7 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
             train_loss = helpers.get_loss(Y_train, preds_train)
 
         elif fit_type == 'one_vs_one':
-            Y_hat_train, preds_train = get_final_predictions_one_vs_one(alpha, K_train, neg, pos)
+            Y_hat_train, preds_train = get_final_predictions_one_vs_one(alpha, K_train)
             train_loss = helpers.get_loss(Y_encoding, preds_train)
 
         # Print results
@@ -151,8 +151,8 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
 
     
     if fit_type == 'one_vs_one':
-        Y_hat_train, preds_train = get_final_predictions_one_vs_one(alpha, K_train, neg, pos)
-        Y_hat_val, preds_val = get_final_predictions_one_vs_one(alpha, K_val, neg, pos)
+        Y_hat_train, preds_train = get_final_predictions_one_vs_one(alpha, K_train)
+        Y_hat_val, preds_val = get_final_predictions_one_vs_one(alpha, K_val)
         train_loss = helpers.get_loss(Y_train, preds_train)
         
         history = {}
@@ -212,12 +212,11 @@ def get_final_predictions(alpha, K_examples):
     return(Y_hat, preds)
 
 
-def get_final_predictions_one_vs_one(alpha, K_examples, neg, pos):
+def get_final_predictions_one_vs_one(alpha, K_examples):
     '''Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples for 1 vs 1.
     '''
     Y_hat = alpha @ K_examples
     preds = np.sign(Y_hat[0])
-    preds[preds == 0] = -1
 
     return(Y_hat, preds)
