@@ -132,7 +132,6 @@ def run_multiple(params, data_args, epochs, n_classifiers,
 
             all_mistakes['mistakes'].append(mistakes)
             all_mistakes['params'].append((param, run))
-            print(all_mistakes)
             
             overall_run_no += 1
             print("This is overall run no {} for parameter d = {}".format(overall_run_no, param))

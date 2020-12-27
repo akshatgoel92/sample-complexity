@@ -106,8 +106,13 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
         mistake_percent = mistakes/n_samples
         
         # Get predictions and measure training loss
-        Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
-        train_loss = helpers.get_loss(Y_train, preds_train)
+        if fit_type == 'one_vs_all':
+            Y_hat_train, preds_train = get_final_predictions(alpha, K_train)
+            train_loss = helpers.get_loss(Y_train, preds_train)
+
+        elif fit_type == 'one_vs_one':
+            Y_hat_train, preds_train = get_final_predictions_one_vs_one(alpha, K_train, neg, pos)
+            train_loss = helpers.get_loss(Y_encoding, preds_train)
 
         # Print results
         msg = 'Train loss: {}, Online mistakes: {}, Epoch: {}'
@@ -127,15 +132,13 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
                 break
 
     # Get final predictions and losses
-    # Still need to check if we can get rid of this
-    Y_hat_train, preds_train = get_final_predictions(alpha, K_train, fit_type)
-    Y_hat_val, preds_val = get_final_predictions(alpha, K_val, fit_type)
-
-    train_loss = helpers.get_loss(Y_train, preds_train)
-    val_loss = helpers.get_loss(Y_val, preds_val)
-
     # Store results
     if fit_type == 'one_vs_all':
+
+        Y_hat_train, preds_train = get_final_predictions(alpha, K_train)
+        Y_hat_val, preds_val = get_final_predictions(alpha, K_val)
+        train_loss = helpers.get_loss(Y_train, preds_train)
+        val_loss = helpers.get_loss(Y_val, preds_val)
 
         # Store a record of training and validation accuracies and other data from each epoch
         history = {
@@ -146,8 +149,11 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
             "preds_val": preds_val,
         }
 
-
+    
     if fit_type == 'one_vs_one':
+        Y_hat_train, preds_train = get_final_predictions_one_vs_one(alpha, K_train, neg, pos)
+        Y_hat_val, preds_val = get_final_predictions_one_vs_one(alpha, K_val, neg, pos)
+        train_loss = helpers.get_loss(Y_train, preds_train)
         
         history = {}
         history['Y_hat_train'] = Y_hat_train
@@ -195,18 +201,23 @@ def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type):
     return(Y_hat, preds, signs, wrong, mistake)
 
 
-def get_final_predictions(alpha, K_examples, fit_type):
+def get_final_predictions(alpha, K_examples):
     '''Returns raw predictions and class predictions
     given alpha weights and Gram matrix K_examples.
     '''
-    
     Y_hat = alpha @ K_examples
-    
-    if fit_type == 'one_vs_all':
-        preds = np.argmax(Y_hat, axis = 0)
+    preds = np.argmax(Y_hat, axis = 0)
 
-    if fit_type == 'one_vs_one':
-        preds = np.sign(Y_hat)
-        preds[Y_hat == 0] = -1
+
+    return(Y_hat, preds)
+
+
+def get_final_predictions_one_vs_one(alpha, K_examples, neg, pos):
+    '''Returns raw predictions and class predictions
+    given alpha weights and Gram matrix K_examples for 1 vs 1.
+    '''
+    Y_hat = alpha @ K_examples
+    preds = np.sign(Y_hat[0])
+    preds[preds == 0] = -1
 
     return(Y_hat, preds)
