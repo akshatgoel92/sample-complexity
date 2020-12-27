@@ -224,6 +224,24 @@ def get_one_vs_one_encoding(Y_train, n_classifiers, neg, pos):
     return(Y_encoding)
 
 
+def get_cv_results(fold_histories):
+    '''
+    --------------------------------
+    This function takes in a 
+    list of history dictionaries
+    where the list is of length k. 
+    k is the no. of folds we have
+    used in cross-validation. This
+    will return the mean value at
+    every epoch across folds.
+    --------------------------------
+    '''
+    train_loss = np.mean(np.array([history['train_loss'] for history in fold_histories]))
+    val_loss = np.mean(np.array([history['val_loss'] for history in fold_histories]))
+
+    return(train_loss, val_loss)
+
+
 def save_results(results, question_no):
     '''
     Save results according to question no.
@@ -263,24 +281,6 @@ def save_experiment_results(results, question_no):
 
     return(results_df)
 
-
-
-def get_cv_results(fold_histories):
-    '''
-    --------------------------------
-    This function takes in a 
-    list of history dictionaries
-    where the list is of length k. 
-    k is the no. of folds we have
-    used in cross-validation. This
-    will return the mean value at
-    every epoch across folds.
-    --------------------------------
-    '''
-    train_loss = np.mean(np.array([history['train_loss'] for history in fold_histories]))
-    val_loss = np.mean(np.array([history['val_loss'] for history in fold_histories]))
-
-    return(train_loss, val_loss)
 
 
 def sigmoid(x):
