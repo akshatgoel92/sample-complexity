@@ -57,6 +57,29 @@ def run_multiple(params, data_args, epochs, n_classifiers,
     time_msg = "Elapsed time is....{} minutes"
     start = time.time()
 
+
+    datasets = []
+    
+    # Create # total_runs different splits of the datasets 
+    for run in range(total_runs):
+        
+        # Prepare data for the perceptron
+        # Shuffle the dataset before splitting it
+        # Split the data into training and validation set 
+        X_shuffle, Y_shuffle = helpers.shuffle_data(X, Y)
+        X_train, X_val, Y_train, Y_val = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
+            
+        # Convert data to integer
+        Y_train = Y_train.astype(int)
+        Y_val = Y_val.astype(int)
+
+        # Store data splits and settings in tuples
+        data = (X_train, Y_train, X_val, Y_val)
+        
+
+        # Append them to the lists we created earlier for easy access
+        datasets.append(data)
+
     
     # Start run
     for param in params:
@@ -69,24 +92,16 @@ def run_multiple(params, data_args, epochs, n_classifiers,
 
         }
         
-        for run in range(total_runs):
+        for run, data in enumerate(datasets):
             # Prepare data for the perceptron
             # Shuffle the dataset before splitting it
             # Split the data into training and validation set 
-            
-            X_shuffle, Y_shuffle = helpers.shuffle_data(X, Y)
-            
-            X_train, X_val, Y_train, Y_val = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
-            
-            # Convert data to integer
-            Y_train = Y_train.astype(int)
-            Y_val = Y_val.astype(int)
-
-            # Get setup for training
-            settings = train_setup(X_train, Y_train,  X_val, Y_val, fit_type, n_classifiers, param, kernel_type)
-            
             # Now train
-            history = train_perceptron(*settings, X_train, Y_train, X_val, Y_val, epochs, 
+
+            # Get settings for training
+            settings = train_setup(*data, fit_type, n_classifiers, param, kernel_type)
+
+            history = train_perceptron(*settings, *data, epochs, 
                                         n_classifiers, question_no, convergence_epochs, fit_type, 
                                         check_convergence)
             
