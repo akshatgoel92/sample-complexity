@@ -179,6 +179,27 @@ def run_multiple(params, data_args, epochs, n_classifiers,
     # Load data
     X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
 
+    all_subset_datasets = []
+    all_splits = []
+    all_masks = []
+    all_trackers = []
+
+    for run in range(total_runs):
+
+      # Prepare data for multiple runs
+      # Shuffle the dataset before splitting it and then split into training and validation set
+      X_shuffle, Y_shuffle = helpers.shuffle_data(X,Y)
+      X_train, X_val, Y_train, Y_val = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
+            
+      # Convert data to integer
+      Y_train = Y_train.astype(int)
+      Y_val = Y_val.astype(int)
+
+      datasets, tracker, masks = subset_data(X_train, Y_train, X_val, Y_val, n_classes)
+
+    # These remains constant over different splits
+    n_train = len(Y_train)
+    n_val = len(Y_val)
 
     # Start timer
     overall_run_no = 0
@@ -198,21 +219,6 @@ def run_multiple(params, data_args, epochs, n_classifiers,
         }
         
         for run in range(total_runs):
-
-            # Prepare data for multiple runs
-            
-            # Shuffle the dataset before splitting it and then split into training and validation set
-            X_shuffle, Y_shuffle = helpers.shuffle_data(X,Y)
-            X_train, X_val, Y_train, Y_val = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
-            
-            # Convert data to integer
-            Y_train = Y_train.astype(int)
-            Y_val = Y_val.astype(int)
-
-            datasets, tracker, masks = subset_data(X_train, Y_train, X_val, Y_val, n_classes)
-
-            n_train = len(Y_train)
-            n_val = len(Y_val)
             
             # Now train
             train_loss, val_loss = train_one_vs_one(datasets, tracker, masks, n_train, n_val,
@@ -298,6 +304,8 @@ if __name__ == '__main__':
         }
 
       run_multiple(params, data_args, **multiple_run_args)
+
+
 
 
 
