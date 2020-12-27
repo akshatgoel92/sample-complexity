@@ -318,12 +318,12 @@ if __name__ == '__main__':
         # Store test arguments
         test_args = {
 
-            'epochs':20,
+            'epochs':5,
             'n_classifiers': 3,
             'question_no': 'test.txt',
             'convergence_epochs':5,
             'fit_type': 'one_vs_all',
-            'check_convergence': True,
+            'check_convergence': False,
             'kernel_type': 'polynomial',
             'd':3,
 
