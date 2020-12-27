@@ -199,12 +199,10 @@ def run_multiple(params, data_args, epochs, n_classifiers,
         
         for run in range(total_runs):
 
-            # Prepare data for the perceptron
-            # Shuffle the dataset before splitting it
-            # Split the data into training and validation set 
+            # Prepare data for multiple runs
             
-            X_shuffle, Y_shuffle = helpers.shuffle_data(X, Y)
-            
+            # Shuffle the dataset before splitting it and then split into training and validation set
+            X_shuffle, Y_shuffle = helpers.shuffle_data(X,Y)
             X_train, X_val, Y_train, Y_val = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
             
             # Convert data to integer

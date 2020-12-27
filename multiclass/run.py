@@ -45,7 +45,16 @@ def run_multiple(params, data_args, epochs, n_classifiers,
                'train_loss_mean': [],
                'train_loss_std': [],
                'val_loss_mean': [],
-               'val_loss_std': []}
+               'val_loss_std': []
+               }
+
+
+    all_mistakes = {
+
+            'params': [], 
+            'mistakes': []
+
+            }
 
     
     # Load data
@@ -58,7 +67,11 @@ def run_multiple(params, data_args, epochs, n_classifiers,
     start = time.time()
 
 
+    # Store datasets here
     datasets = []
+    perms = []
+    train_perms = []
+    val_perms = []
     
     # Create # total_runs different splits of the datasets 
     for run in range(total_runs):
@@ -66,8 +79,9 @@ def run_multiple(params, data_args, epochs, n_classifiers,
         # Prepare data for the perceptron
         # Shuffle the dataset before splitting it
         # Split the data into training and validation set 
-        X_shuffle, Y_shuffle = helpers.shuffle_data(X, Y)
-        X_train, X_val, Y_train, Y_val = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
+        X_shuffle, Y_shuffle, perm = helpers.shuffle_data(X, Y)
+        X_train, X_val, Y_train, Y_val, train_perm, val_perm = helpers.split_data(X_shuffle, Y_shuffle, perm, 
+                                                                                  data_args['train_percent'])
             
         # Convert data to integer
         Y_train = Y_train.astype(int)
@@ -75,11 +89,15 @@ def run_multiple(params, data_args, epochs, n_classifiers,
 
         # Store data splits and settings in tuples
         data = (X_train, Y_train, X_val, Y_val)
-        
 
-        # Append them to the lists we created earlier for easy access
+        # Apend dataset for this run to the list of run-wise datasets
         datasets.append(data)
-
+        
+        # Append permutations to the lists we created earlier for mistake tracking
+        perms.append(perm)
+        val_perms.append(val_perm)
+        train_perms.append(train_perm)
+        
     
     # Start run
     for param in params:
@@ -88,10 +106,10 @@ def run_multiple(params, data_args, epochs, n_classifiers,
         
         'param': param, 
         'train_loss': [],
-        'val_loss': []
+        'val_loss': [],
 
         }
-        
+
         for run, data in enumerate(datasets):
             # Prepare data for the perceptron
             # Shuffle the dataset before splitting it
@@ -102,17 +120,25 @@ def run_multiple(params, data_args, epochs, n_classifiers,
             settings = train_setup(*data, fit_type, n_classifiers, param, kernel_type)
 
             history = train_perceptron(*settings, *data, epochs, 
-                                        n_classifiers, question_no, convergence_epochs, fit_type, 
+                                        n_classifiers, question_no, 
+                                        convergence_epochs, fit_type, 
                                         check_convergence)
+
+            mistakes = helpers.get_mistakes(Y_val, history['preds_val'], val_perms[run])
             
-            # Store results
+            # Store results and mistakes
             histories['train_loss'].append(history['train_loss'])
             histories['val_loss'].append(history['val_loss'])
 
+            all_mistakes['mistakes'].append(mistakes)
+            all_mistakes['params'].append((param, run))
+            print(all_mistakes)
+            
             overall_run_no += 1
             print("This is overall run no {} for parameter d = {}".format(overall_run_no, param))
             elapsed = (time.time() - start)/60
             print(time_msg.format(elapsed))
+
 
         # Append results
         results['train_loss_mean'].append(np.mean(np.array(histories['train_loss'])))
@@ -120,11 +146,11 @@ def run_multiple(params, data_args, epochs, n_classifiers,
         results['val_loss_mean'].append(np.mean(np.array(histories['val_loss'])))
         results['val_loss_std'].append(np.std(np.array(histories['val_loss'])))
 
-        print(results)
-    
+    # Save mistakes separately
+    helpers.save_results(all_mistakes, question_no)
     helpers.save_experiment_results(results, question_no)
     
-    return(results)
+    return(results, all_mistakes)
 
 
 

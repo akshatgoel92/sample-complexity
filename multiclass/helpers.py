@@ -35,7 +35,7 @@ def shuffle_data(X, Y):
     X = X[perm, :]
     Y = Y[perm]
 
-    return(X, Y)
+    return(X, Y, perm)
 
 
 def show_images(arr, shape=(16, 16)):
@@ -48,7 +48,7 @@ def show_images(arr, shape=(16, 16)):
     imgplot = plt.imshow(img)
 
 
-def split_data(X, Y, train_percent):
+def split_data(X, Y, perm, train_percent):
     '''
     Take datasets X and Y and split them 
     into train_percent*100 % training dataset
@@ -61,13 +61,15 @@ def split_data(X, Y, train_percent):
     # Filter the dataframe to get training and testing rows
     X_train = X[:n_train, :]
     Y_train = Y[:n_train]
+    train_perm = perm[:n_train]
     
     # Validation set
     X_val = X[n_train:, :]
     Y_val = Y[n_train:]
+    val_perm = perm[n_train:]
     
     # Return statement
-    return(X_train, X_val, Y_train, Y_val)
+    return(X_train, X_val, Y_train, Y_val, train_perm, val_perm)
 
 
 def get_polynomial_kernel(X, X_, d):
@@ -123,6 +125,17 @@ def get_loss(target, pred):
     and predicted values respectively.
     '''
     return 1 - (np.sum(target==pred)/max(target.shape))
+
+
+def get_mistakes(target, pred, perm):
+    '''
+    Returns binary accuracy given 
+    two arrays containing true values
+    and predicted values respectively.
+    '''
+    mistakes = perm[np.where(target != pred)]
+
+    return mistakes
 
 
 def get_confusion_matrix(target, pred):
