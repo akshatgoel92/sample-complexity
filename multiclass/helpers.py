@@ -38,14 +38,15 @@ def shuffle_data(X, Y):
     return(X, Y, perm)
 
 
-def show_images(arr, shape=(16, 16)):
+def show_images(arr, shape=(16, 16), path='../results/img'):
     '''
     Takes in a numpy array
     of pixel values and an image shape 
     and displays the associated image.
     '''
     img = arr.reshape(shape)
-    imgplot = plt.imshow(img)
+    plt.imshow(img)
+    plt.savefig(path)
 
 
 def split_data(X, Y, perm, train_percent):
@@ -294,6 +295,22 @@ def save_experiment_results(results, question_no):
 
     return(results_df)
 
+
+def process_frequent_mistakes(question_no, id):
+    '''
+    Store images of frequent mistakes
+    '''
+    mistakes = np.vstack(np.unique(np.concatenate(mistakes), return_counts = True)).T
+
+    sorted_mistakes = mistakes[np.argsort(mistakes[: ,1])]
+
+    sorted_mistakes = [-5:, 0]
+
+    X, Y = helpers.load_data('data', 'zipcombo.dat')
+
+    for i, img_no in sorted_mistakes:
+
+        show_images(X[img_no], path = 'results/{}_{}_{}.png'.format(img_no, Y[img_no], sorted_mistakes[i, 1]))
 
 
 def sigmoid(x):

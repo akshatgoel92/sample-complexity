@@ -434,3 +434,24 @@ if __name__ == '__main__':
         }
 
         run_multiple_cv(params, data_args, **cv_args)
+
+
+    if '1.5' in question_no:
+
+        params = list(np.arange(0.01, 1.01, 0.01))
+
+        print(params)
+
+        multiple_run_args = {
+    
+            'epochs': 20, 
+            'n_classifiers': 10,
+            'question_no': '1.5',
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': True,
+            'kernel_type': 'gaussian',
+            'total_runs': 1 
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)

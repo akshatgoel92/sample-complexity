@@ -94,15 +94,15 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
       train_total_confidences, val_total_confidences, train_votes, val_votes = results
 
   # Return predictions
-  train_preds = np.argmax(train_votes, axis = 0)
-  val_preds = np.argmax(val_votes, axis = 0)
+  train_preds = np.argmax(train_total_confidences, axis = 0)
+  val_preds = np.argmax(val_total_confidences, axis = 0)
 
   train_loss = helpers.get_loss(train_preds, Y_train)
   val_loss = helpers.get_loss(val_preds, Y_val)
 
   print("Overall train loss {}, Overall val loss {}".format(train_loss, val_loss))
 
-  return train_loss, val_loss
+  return train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_predictions, val_predictions
 
 
 def update_results(train_total_confidences, val_total_confidences, 
@@ -127,8 +127,7 @@ def update_results(train_total_confidences, val_total_confidences,
     val_votes[i, val_predictions[k, :] == -1] += 1
     val_votes[j, val_predictions[k, :] == +1] += 1
 
-    return(train_total_confidences, 
-           val_total_confidences, 
+    return(train_total_confidences, val_total_confidences, 
            train_votes, val_votes)
 
 
@@ -232,11 +231,13 @@ def run_multiple(params, data_args, epochs, n_classifiers,
           _, _, Y_train, Y_val = all_splits[run]
             
           # Now train
-          train_loss, val_loss = train_one_vs_one(datasets, tracker, masks, n_train, n_val,
+          train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_preds, val_preds = train_one_vs_one(datasets, tracker, masks, n_train, n_val,
                                                   epochs, n_classifiers, question_no, 
                                                   convergence_epochs, fit_type, 
                                                   check_convergence, kernel_type, 
                                                   param, n_classes, Y_train, Y_val)
+
+        #return(train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_preds, val_preds, Y_train, Y_val)
             
           # Store results
           histories['train_loss'].append(train_loss)
@@ -264,7 +265,9 @@ def run_multiple(params, data_args, epochs, n_classifiers,
 if __name__ == '__main__':
 
   
-  np.random.seed(1239012)
+  # np.random.seed(1212312)
+  # np.random.seed(211208)
+  np.random.seed(1123)
 
   question_no = 'multiple'
 
@@ -291,12 +294,12 @@ if __name__ == '__main__':
   if question_no == 'multiple':
 
       # Store kernel parameter list to iterate over
-      params = [1, 2, 3]
+      params = [2]
 
       # Store the arguments relating to the data set
       data_args = {
 
-          'data_path': 'data',
+          'data_path': '../data',
           'name': 'zipcombo.dat', 
           'train_percent': 0.8,
           'k': 5,
@@ -306,15 +309,16 @@ if __name__ == '__main__':
 
       multiple_run_args = {
     
-            'epochs': 2, 
+            'epochs': 1, 
             'n_classifiers': 45,
             'question_no': '1.4.3',
-            'convergence_epochs': 2,
+            'convergence_epochs': 1,
             'fit_type': 'one_vs_one',
             'check_convergence': True,
             'kernel_type': 'polynomial',
-            'total_runs': 1, 
+            'total_runs': 20, 
             'n_classes': 10
         }
 
-      run_multiple(params, data_args, **multiple_run_args)
+      train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_preds, val_preds, Y_train, Y_val = run_multiple(params, data_args, **multiple_run_args)
+

@@ -202,7 +202,8 @@ def get_train_predictions(alpha, K_examples, Y_encoding, target, fit_type):
 
 def get_final_predictions(alpha, K_examples):
     '''Returns raw predictions and class predictions
-    given alpha weights and Gram matrix K_examples.
+    given alpha weights and Gram matrix K_examples for
+    1 vs all.
     '''
     Y_hat = alpha @ K_examples
     preds = np.argmax(Y_hat, axis = 0)
@@ -216,7 +217,7 @@ def get_final_predictions_one_vs_one(alpha, K_examples):
     given alpha weights and Gram matrix K_examples for 1 vs 1.
     '''
     Y_hat = alpha @ K_examples
-    preds = np.sign(Y_hat[0])
+    preds = np.sign(Y_hat)
     preds[preds == 0] = -1
 
     return(Y_hat, preds)
