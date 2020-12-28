@@ -186,10 +186,10 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
                     }
 
         # Prepare data for the perceptron
-        X_shuffle, Y_shuffle = helpers.shuffle_data(X, Y)
+        X_shuffle, Y_shuffle, perm = helpers.shuffle_data(X, Y)
 
         # Split into training and validation set
-        X_train, X_test, Y_train, Y_test = helpers.split_data(X_shuffle, Y_shuffle, data_args['train_percent'])
+        X_train, X_test, Y_train, Y_test, _, _ = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
         Y_train = Y_train.astype(int)
         Y_test = Y_test.astype(int)
         
@@ -358,7 +358,7 @@ if __name__ == '__main__':
             'question_no': '1.2',
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
-            'check_convergence': False,
+            'check_convergence': True,
             'kernel_type': 'polynomial',
             'total_runs': 20
         }

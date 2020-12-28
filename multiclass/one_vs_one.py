@@ -46,7 +46,6 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
   '''
   Train one vs one classifer
   '''
-  
   train_predictions = np.zeros((n_classifiers, n_train))
   train_confidences = np.zeros((n_classifiers, n_train))
   
@@ -94,15 +93,9 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
       # Unpack updated results
       train_total_confidences, val_total_confidences, train_votes, val_votes = results
 
-  print(train_votes[:, :10])
-  print(val_votes[:, :10])
   # Return predictions
   train_preds = np.argmax(train_votes, axis = 0)
-  print(train_preds[:10])
-  print(Y_train[:10])
   val_preds = np.argmax(val_votes, axis = 0)
-  print(val_preds[:10])
-  print(Y_val[:10])
 
   train_loss = helpers.get_loss(train_preds, Y_train)
   val_loss = helpers.get_loss(val_preds, Y_val)
@@ -298,7 +291,7 @@ if __name__ == '__main__':
   if question_no == 'multiple':
 
       # Store kernel parameter list to iterate over
-      params = [1]
+      params = [1, 2, 3]
 
       # Store the arguments relating to the data set
       data_args = {
@@ -313,7 +306,7 @@ if __name__ == '__main__':
 
       multiple_run_args = {
     
-            'epochs': 20, 
+            'epochs': 2, 
             'n_classifiers': 45,
             'question_no': '1.4.3',
             'convergence_epochs': 2,

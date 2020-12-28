@@ -99,7 +99,6 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
             # Enforce uniqueness in the mistake tracker
             if np.sum(wrong) > 0:
                 mistake_tracker.append(i)
-                mistake_tracker = list(set(mistake_tracker))
                 alpha[wrong, i] -= signs[wrong]
 
         # Get the training prediction with the updated weights
@@ -218,5 +217,6 @@ def get_final_predictions_one_vs_one(alpha, K_examples):
     '''
     Y_hat = alpha @ K_examples
     preds = np.sign(Y_hat[0])
+    preds[preds == 0] = -1
 
     return(Y_hat, preds)
