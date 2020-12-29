@@ -334,7 +334,7 @@ if __name__ == '__main__':
 
         history = run_test_case(**test_args)
 
-    if '1.1' in question_no:
+    if '1.1_polynomial_multiple' in question_no:
 
 
         # Store arguments for this
@@ -352,7 +352,7 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if '1.2' in question_no:
+    if '1.1_polynomial_cv' in question_no:
 
         cv_args = {
     
@@ -369,7 +369,31 @@ if __name__ == '__main__':
         run_multiple_cv(params, data_args, **cv_args)
 
 
-    if '1.4' in question_no:
+    if '1.1_polynomial_get_images' in question_no:
+
+
+        # Store arguments for this
+        multiple_run_args = {
+    
+            'epochs': 20, 
+            'n_classifiers': 10,
+            'question_no': question_no,
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': True,
+            'kernel_type': 'polynomial',
+            'total_runs': 20
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+
+    if '1.1_polynomial_get_confusion' in question_no:
+
+        print("Add code here to get final confusion matrix...")
+
+
+    if '1.5_gaussian_multiple' in question_no:
 
 
         # Store arguments for this
@@ -387,7 +411,8 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-        
+    if '1.5_gaussian_cv' in question_no:
+
         cv_args = {
     
             'epochs': 18,
@@ -403,43 +428,7 @@ if __name__ == '__main__':
         run_multiple_cv(params, data_args, **cv_args)
 
 
-    if '1.4.1' in question_no:
-
-
-        # Store arguments for this
-        multiple_run_args = {
-    
-            'epochs': 20, 
-            'n_classifiers': 10,
-            'question_no': question_no,
-            'convergence_epochs': 2,
-            'fit_type': 'one_vs_one',
-            'check_convergence': True,
-            'kernel_type': 'polynomial',
-            'total_runs': 20 
-        }
-
-        run_multiple(params, data_args, **multiple_run_args)
-
-
-    if '1.4.2' in question_no:
-        
-        cv_args = {
-    
-            'epochs': 20,
-            'n_classifiers': 10, 
-            'question_no': question_no,
-            'convergence_epochs': 2,
-            'fit_type': 'one_vs_one',
-            'check_convergence': False,
-            'kernel_type': 'polynomial',
-            'total_runs': 20 
-        }
-
-        run_multiple_cv(params, data_args, **cv_args)
-
-
-    if '1.5' in question_no:
+    if '1.5_gaussian_multiple' in question_no:
 
         params = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
         
@@ -459,7 +448,7 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if '1.5_cv' in question_no:
+    if '1.5_gaussian_cv' in question_no:
 
         params = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
         
