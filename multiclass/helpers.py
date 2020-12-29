@@ -170,33 +170,6 @@ def get_confusion_matrix(target, pred):
     return(cf)
 
 
-def compute_final_cf(n_classes, question_no='1.2', id=31):
-    '''
-    Post-process the final CF into the format required by
-    the question
-    '''
-    results = open_results(question_no, id)
-    test_cf = results['test_cf']
-
-    n_cf = len(results)
-    cf = np.zeros((n_classes, n_classes))
-
-    for result in test_cf:
-        cf = np.add(cf, result)
-
-    cf = np.divide(cf, np.sum(cf, axis = 1))
-
-    # fill_diagonal operates in place
-    np.fill_diagonal(cf, 0)
-
-    # Now normalize the matrix
-    cf = pd.DataFrame(cf)
-
-    cf.to_csv('results/confusion_matrix.csv')
-
-    return(cf)
-
-
 
 def get_loss_plot(results, lab, run_no, param):
   '''
@@ -276,7 +249,7 @@ def open_results(question_no, id):
     '''
     Open results according to question no.
     '''
-    f_name = os.path.join('results', '{}_results_id_{}.txt'.format(question_no, id))
+    f_name = os.path.join('../results', '{}_results_id_{}.txt'.format(question_no, id))
     
     with open(f_name, 'rb') as f:
         results = pickle.load(f)
@@ -299,23 +272,6 @@ def save_experiment_results(results, question_no):
     results_df.to_csv(os.path.join("results", "table_{}_id_{}.csv".format(question_no, id)))
 
     return(results_df)
-
-
-def process_frequent_mistakes(question_no, id):
-    '''
-    Store images of frequent mistakes
-    '''
-    mistakes = np.vstack(np.unique(np.concatenate(mistakes), return_counts = True)).T
-
-    sorted_mistakes = mistakes[np.argsort(mistakes[: ,1])]
-
-    sorted_mistakes = sorted_mistakes[-5:, 0]
-
-    X, Y = helpers.load_data('data', 'zipcombo.dat')
-
-    for i, img_no in sorted_mistakes:
-
-        show_images(X[img_no], path = 'results/{}_{}_{}.png'.format(img_no, Y[img_no], sorted_mistakes[i, 1]))
 
 
 def sigmoid(x):
