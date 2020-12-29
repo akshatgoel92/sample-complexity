@@ -170,24 +170,29 @@ def get_confusion_matrix(target, pred):
     return(cf)
 
 
-def compute_final_cf(n_classes, question_no):
+def compute_final_cf(n_classes, question_no='1.2', id=31):
     '''
     Post-process the final CF into the format required by
     the question
     '''
-    results = open_results(question_no)
+    results = open_results(question_no, id)
+    test_cf = results['test_cf']
 
     n_cf = len(results)
     cf = np.zeros((n_classes, n_classes))
 
-    for result in results:
-        cf = np.add(cf, result['val_cf'])
+    for result in test_cf:
+        cf = np.add(cf, result)
+
+    cf = np.divide(cf, np.sum(cf, axis = 1))
 
     # fill_diagonal operates in place
     np.fill_diagonal(cf, 0)
 
     # Now normalize the matrix
-    cf = np.divide(a, np.sum(a, axis = 1))
+    cf = pd.DataFrame(cf)
+
+    cf.to_csv('results/confusion_matrix.csv')
 
     return(cf)
 
@@ -304,7 +309,7 @@ def process_frequent_mistakes(question_no, id):
 
     sorted_mistakes = mistakes[np.argsort(mistakes[: ,1])]
 
-    sorted_mistakes = [-5:, 0]
+    sorted_mistakes = sorted_mistakes[-5:, 0]
 
     X, Y = helpers.load_data('data', 'zipcombo.dat')
 

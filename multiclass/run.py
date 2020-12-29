@@ -52,7 +52,8 @@ def run_multiple(params, data_args, epochs, n_classifiers,
     all_mistakes = {
 
             'params': [], 
-            'mistakes': []
+            'mistakes': [],
+            'train_mistakes': []
 
             }
 
@@ -125,11 +126,13 @@ def run_multiple(params, data_args, epochs, n_classifiers,
                                         check_convergence)
 
             mistakes = helpers.get_mistakes(Y_val, history['preds_val'], val_perms[run])
+            train_mistakes = helpers.get_mistakes(Y_train, history['preds_train'], train_perms[run])
             
             # Store results and mistakes
             histories['train_loss'].append(history['train_loss'])
             histories['val_loss'].append(history['val_loss'])
 
+            all_mistakes['train_mistakes'].append(train_mistakes)
             all_mistakes['mistakes'].append(mistakes)
             all_mistakes['params'].append((param, run))
             
@@ -319,7 +322,7 @@ if __name__ == '__main__':
 
             'epochs':3,
             'n_classifiers': 3,
-            'question_no': 'test.txt',
+            'question_no': question_no,
             'convergence_epochs':5,
             'fit_type': 'one_vs_all',
             'check_convergence': False,
@@ -339,7 +342,7 @@ if __name__ == '__main__':
     
             'epochs': 20, 
             'n_classifiers': 10,
-            'question_no': '1.1',
+            'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': True,
@@ -355,7 +358,7 @@ if __name__ == '__main__':
     
             'epochs': 20,
             'n_classifiers': 10, 
-            'question_no': '1.2',
+            'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': True,
@@ -374,7 +377,7 @@ if __name__ == '__main__':
     
             'epochs': 20, 
             'n_classifiers': 10,
-            'question_no': '1.1',
+            'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': True,
@@ -389,7 +392,7 @@ if __name__ == '__main__':
     
             'epochs': 18,
             'n_classifiers': 10, 
-            'question_no': '1.2',
+            'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': False,
@@ -408,7 +411,7 @@ if __name__ == '__main__':
     
             'epochs': 20, 
             'n_classifiers': 10,
-            'question_no': '1.1',
+            'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_one',
             'check_convergence': True,
@@ -425,7 +428,7 @@ if __name__ == '__main__':
     
             'epochs': 20,
             'n_classifiers': 10, 
-            'question_no': '1.2',
+            'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_one',
             'check_convergence': False,
@@ -438,20 +441,40 @@ if __name__ == '__main__':
 
     if '1.5' in question_no:
 
-        params = list(np.arange(0.01, 1.01, 0.01))
-
+        params = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
+        
         print(params)
 
         multiple_run_args = {
     
             'epochs': 20, 
             'n_classifiers': 10,
-            'question_no': '1.5',
+            'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': True,
             'kernel_type': 'gaussian',
-            'total_runs': 1 
+            'total_runs': 20 
         }
 
         run_multiple(params, data_args, **multiple_run_args)
+
+    if '1.5_cv' in question_no:
+
+        params = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
+        
+        print(params)
+
+        cv_args = {
+    
+            'epochs': 20,
+            'n_classifiers': 10, 
+            'question_no': question_no,
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': True,
+            'kernel_type': 'gaussian',
+            'total_runs': 20 
+        }
+
+        run_multiple_cv(params, data_args, **cv_args)
