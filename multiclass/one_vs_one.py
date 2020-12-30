@@ -102,7 +102,7 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
 
   print("Overall train loss {}, Overall val loss {}".format(train_loss, val_loss))
 
-  return train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_predictions, val_predictions
+  return train_loss, val_loss
 
 
 def update_results(train_total_confidences, val_total_confidences, 
@@ -231,13 +231,11 @@ def run_multiple(params, data_args, epochs, n_classifiers,
           _, _, Y_train, Y_val = all_splits[run]
             
           # Now train
-          train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_preds, val_preds = train_one_vs_one(datasets, tracker, masks, n_train, n_val,
+          train_loss, val_loss = train_one_vs_one(datasets, tracker, masks, n_train, n_val,
                                                   epochs, n_classifiers, question_no, 
                                                   convergence_epochs, fit_type, 
                                                   check_convergence, kernel_type, 
                                                   param, n_classes, Y_train, Y_val)
-
-        #return(train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_preds, val_preds, Y_train, Y_val)
             
           # Store results
           histories['train_loss'].append(train_loss)
@@ -261,15 +259,158 @@ def run_multiple(params, data_args, epochs, n_classifiers,
     return(results)
 
 
+def run_multiple_cv(params, data_args, epochs, n_classifiers, 
+                    question_no, convergence_epochs, fit_type, 
+                    check_convergence, kernel_type, total_runs):
+    '''Check which kernel parameter results
+    in lowest validation loss
+    --------------------------------------
+    '''
+    
+    results = {'best_param': [],
+               'train_loss': [],
+               'test_loss': [],
+               }
+
+    X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
+    overall_run_no = 0
+
+    time_msg = "Elapsed time is....{} minutes"
+    start = time.time()
+    
+    for run in range(total_runs):
+
+
+        histories = {
+                        'params': params,
+                        'train_loss': [],
+                        'val_loss': []
+                    }
+
+        # Store number of classes
+        n_classes=10
+
+        # Prepare data for the perceptron
+        X_shuffle, Y_shuffle, perm = helpers.shuffle_data(X, Y)
+
+        # Split into training and validation set
+        X_train, X_test, Y_train, Y_test, train_perm, test_perm = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
+        Y_train = Y_train.astype(int)
+        Y_test = Y_test.astype(int)
+
+        n_train = len(X_train)
+        n_test = len(X_test)
+
+        # For retraining best parameters
+        full_datasets, full_tracker, full_masks = subset_data(X_train, Y_train, X_test, Y_test, n_classes)
+        
+        # Divide into a list of folds
+        X_folds, Y_folds = helpers.get_k_folds(X_train, Y_train, data_args['k'])
+
+        # Each fold will go here
+        
+        subset_datasets_by_fold = []
+        splits_by_fold = []
+        masks_by_fold = []
+        trackers_by_fold = []
+
+        for fold_no in range(data_args['k']):
+        
+                # Put in the x-values
+                X_train_fold = np.concatenate(X_folds[:fold_no] + X_folds[fold_no+1:])
+                X_val_fold = X_folds[fold_no]
+        
+                # Put in the Y values
+                Y_train_fold = np.concatenate(Y_folds[:fold_no] + Y_folds[fold_no+1:])
+                Y_val_fold =  Y_folds[fold_no]
+
+                data, tracker, masks = subset_data(X_train_fold, Y_train_fold, X_val_fold, Y_val_fold, n_classes)
+                subset_datasets_by_fold.append(data)
+                
+                splits_by_fold.append([X_train_fold, X_val_fold, Y_train_fold, Y_val_fold])
+                masks_by_fold.append(masks)
+                trackers_by_fold.append(tracker)
+
+
+
+        # Now iterate through the parameters
+        for param in params:
+
+            # Print progress
+            print("This is run {} for parameter d = {}...".format(run, param))
+
+            train_loss_by_fold = []
+            val_loss_by_fold = []
+
+            for fold, datasets in enumerate(subset_datasets_by_fold):
+
+              tracker = trackers_by_fold[fold]
+              masks = masks_by_fold[fold]
+              _, _, Y_train_fold, Y_val_fold = splits_by_fold[fold]
+
+              n_train_fold = len(Y_train_fold)
+              n_val_fold = len(Y_val_fold)
+            
+              # Now train
+              train_loss, val_loss = train_one_vs_one(datasets, tracker, masks, n_train_fold, n_val_fold,
+                                                      epochs, n_classifiers, question_no, 
+                                                      convergence_epochs, fit_type, 
+                                                      check_convergence, kernel_type, 
+                                                      param, n_classes, Y_train_fold, Y_val_fold)
+
+              train_loss_by_fold.append(train_loss)
+              val_loss_by_fold.append(val_loss)
+        
+            # Get avg. accuracies by epoch across folds
+            cv_train_loss = np.mean(np.array(train_loss_by_fold))
+            cv_val_loss = np.mean(np.array(val_loss_by_fold))
+            
+            # Append to the histories dictionary
+            histories['train_loss'].append(cv_train_loss)
+            histories['val_loss'].append(cv_val_loss)
+
+        # Get best parameter value
+        best_val_loss = np.argmin(np.array(histories['val_loss']))
+        best_param = histories['params'][best_val_loss]
+
+        # Retrain
+        print("Retraining now...")
+        print("The best parameter is {}....".format(best_param))
+
+        
+        # We are ready to retrain
+        best_train_loss, best_test_loss = train_one_vs_one(full_datasets, full_tracker, full_masks, 
+                                                           n_train, n_test,
+                                                           epochs, n_classifiers, question_no, 
+                                                           convergence_epochs, fit_type, 
+                                                           check_convergence, kernel_type, 
+                                                           param, n_classes, Y_train, Y_test)
+        
+        # Get retraining results and append
+        results['best_param'].append(best_param)
+        results['train_loss'].append(best_train_loss)
+        results['test_loss'].append(best_test_loss)
+
+        overall_run_no += 1
+        print("This is overall run no {}".format(overall_run_no))
+        elapsed = (time.time() - start)/60
+        print(time_msg.format(elapsed))
+
+    print(results)
+
+    # Save the table as a .csv
+    helpers.save_experiment_results(results, question_no)
+    
+    return(results)
+
+
 
 if __name__ == '__main__':
 
   
-  # np.random.seed(1212312)
-  # np.random.seed(211208)
   np.random.seed(1123)
 
-  question_no = 'multiple_one_vs_one'
+  question_no = 'cv_one_vs_one'
 
   if question_no == 'test':
 
@@ -290,6 +431,8 @@ if __name__ == '__main__':
 
     train_loss, val_loss = run_test_case_one_vs_one(**train_args)
     print(train_loss, val_loss)
+
+  
 
   if question_no == 'multiple_one_vs_one':
 
@@ -320,4 +463,38 @@ if __name__ == '__main__':
             'n_classes': 10
         }
 
-      train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_preds, val_preds, Y_train, Y_val = run_multiple(params, data_args, **multiple_run_args)
+      results = run_multiple(params, data_args, **multiple_run_args)
+
+  
+  if question_no == 'cv_one_vs_one':
+
+    # Store kernel parameter list to iterate over
+    params = [1, 2, 3, 4, 5, 6, 7]
+
+    # Store the arguments relating to the data set
+    data_args = {
+
+        'data_path': 'data',
+        'name': 'zipcombo.dat', 
+        'train_percent': 0.8,
+        'k': 5,
+
+        }
+
+    params = [1, 2, 3, 4, 5, 6, 7]
+
+    print(params)
+
+    cv_args = {
+    
+        'epochs': 20,
+        'n_classifiers': 45, 
+        'question_no': question_no,
+        'convergence_epochs': 2,
+        'fit_type': 'one_vs_one',
+        'check_convergence': True,
+        'kernel_type': 'polynomial',
+        'total_runs': 20 
+    }
+
+    results = run_multiple_cv(params, data_args, **cv_args)
