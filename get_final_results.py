@@ -1,9 +1,21 @@
 import os
 import pickle
-import helpers
+from multiclass import helpers
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt
+
+
+def open_results(question_no, id):
+    '''
+    Open results according to question no.
+    '''
+    f_name = os.path.join('results', '{}_results_id_{}.txt'.format(question_no, id))
+    
+    with open(f_name, 'rb') as f:
+        results = pickle.load(f)
+
+    return(results)
 
 
 def compute_final_cf(n_classes = 10, question_no='1.2', id=31, dest = '../results/confusion_matrix.csv'):
@@ -28,11 +40,11 @@ def compute_final_cf(n_classes = 10, question_no='1.2', id=31, dest = '../result
     return(cf)
 
 
-def process_frequent_mistakes(question_no, id):
+def process_frequent_mistakes(question_no = '1.1_polynomial_get_images_cv_mistakes', id=9):
     '''
     Store images of frequent mistakes
     '''
-    results = helpers.open_results(question_no, id)
+    results = open_results(question_no, id)
 
     mistakes = results['mistakes']
     mistakes = np.vstack(np.unique(np.concatenate(mistakes), return_counts = True)).T
@@ -42,5 +54,22 @@ def process_frequent_mistakes(question_no, id):
 
     X, Y = helpers.load_data('data', 'zipcombo.dat')
 
+    imgs = X[sorted_mistakes]
+
     for i, img_no in sorted_mistakes:
         show_images(X[img_no], path = 'results/{}_{}_{}.png'.format(img_no, Y[img_no], sorted_mistakes[i, 1]))
+
+
+
+def plot_imgs(imgs, shape=(16, 16), path='results/test.png'):
+  '''
+  Display imgs
+  '''
+  plt.figure(figsize=(20,10))
+  columns = 5
+  
+  for i, img in enumerate(imgs):
+    plt.subplot(len(imgs) / columns + 1, columns, i + 1)
+    plt.imshow(img.reshape(shape))
+  
+  plt.savefig(path)

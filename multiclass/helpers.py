@@ -38,17 +38,6 @@ def shuffle_data(X, Y):
     return(X, Y, perm)
 
 
-def show_images(arr, shape=(16, 16), path='../results/img'):
-    '''
-    Takes in a numpy array
-    of pixel values and an image shape 
-    and displays the associated image.
-    '''
-    img = arr.reshape(shape)
-    plt.imshow(img)
-    plt.savefig(path)
-
-
 def split_data(X, Y, perm, train_percent):
     '''
     Take datasets X and Y and split them 
@@ -243,18 +232,6 @@ def save_results(results, question_no):
     
     with open(os.path.join('results', '{}_results_id_{}.txt'.format(question_no, id)), 'wb') as f:
         pickle.dump(results, f)
-
-
-def open_results(question_no, id):
-    '''
-    Open results according to question no.
-    '''
-    f_name = os.path.join('../results', '{}_results_id_{}.txt'.format(question_no, id))
-    
-    with open(f_name, 'rb') as f:
-        results = pickle.load(f)
-
-    return(results)
 
 
 

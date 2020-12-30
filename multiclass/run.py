@@ -171,6 +171,14 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
                'train_cf': [],
                'test_cf': []
                }
+
+    all_mistakes = {
+
+            'params': [], 
+            'mistakes': [],
+            'train_mistakes': []
+
+            }
     
     
     X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
@@ -192,7 +200,7 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
         X_shuffle, Y_shuffle, perm = helpers.shuffle_data(X, Y)
 
         # Split into training and validation set
-        X_train, X_test, Y_train, Y_test, _, _ = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
+        X_train, X_test, Y_train, Y_test, train_perm, test_perm = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
         Y_train = Y_train.astype(int)
         Y_test = Y_test.astype(int)
         
@@ -256,6 +264,9 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
                                     epochs, n_classifiers, 
                                     question_no, convergence_epochs, 
                                     fit_type, check_convergence)
+
+        mistakes = helpers.get_mistakes(Y_test, history['preds_val'], test_perm)
+        train_mistakes = helpers.get_mistakes(Y_train, history['preds_train'], train_perm)
         
         # Get retraining results and append
         results['best_param'].append(best_param)
@@ -264,6 +275,10 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
         results['train_cf'].append(helpers.get_confusion_matrix(Y_train, history['preds_train']))
         results['test_cf'].append(helpers.get_confusion_matrix(Y_test, history['preds_val']))
 
+        all_mistakes['train_mistakes'].append(train_mistakes)
+        all_mistakes['mistakes'].append(mistakes)
+        all_mistakes['params'].append((best_param, run))
+
         overall_run_no += 1
         print("This is overall run no {}".format(overall_run_no))
         elapsed = (time.time() - start)/60
@@ -271,6 +286,7 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
 
     # Save the results
     helpers.save_results(results, question_no)
+    helpers.save_results(all_mistakes, question_no + '_mistakes')
     
     # Take the confusion matrix out before saving the table
     results.pop('train_cf', None)
@@ -369,7 +385,7 @@ if __name__ == '__main__':
         run_multiple_cv(params, data_args, **cv_args)
 
 
-    if '1.1_polynomial_get_images' in question_no:
+    if '1.1_polynomial_get_images_multiple' in question_no:
 
 
         # Store arguments for this
@@ -386,6 +402,25 @@ if __name__ == '__main__':
         }
 
         run_multiple(params, data_args, **multiple_run_args)
+
+
+    if '1.1_polynomial_get_images_cv' in question_no:
+
+        params = [1, 2, 3, 4, 5, 6, 7]
+
+        cv_args = {
+    
+            'epochs': 20,
+            'n_classifiers': 10, 
+            'question_no': question_no,
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': True,
+            'kernel_type': 'polynomial',
+            'total_runs': 20
+        }
+
+        run_multiple_cv(params, data_args, **cv_args)
 
 
     if '1.1_polynomial_get_confusion' in question_no:

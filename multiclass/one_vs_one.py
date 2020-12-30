@@ -269,7 +269,7 @@ if __name__ == '__main__':
   # np.random.seed(211208)
   np.random.seed(1123)
 
-  question_no = 'multiple'
+  question_no = 'multiple_one_vs_one'
 
   if question_no == 'test':
 
@@ -291,15 +291,15 @@ if __name__ == '__main__':
     train_loss, val_loss = run_test_case_one_vs_one(**train_args)
     print(train_loss, val_loss)
 
-  if question_no == 'multiple':
+  if question_no == 'multiple_one_vs_one':
 
       # Store kernel parameter list to iterate over
-      params = [2]
+      params = [1, 2, 3, 4, 5, 6, 7]
 
       # Store the arguments relating to the data set
       data_args = {
 
-          'data_path': '../data',
+          'data_path': 'data',
           'name': 'zipcombo.dat', 
           'train_percent': 0.8,
           'k': 5,
@@ -309,10 +309,10 @@ if __name__ == '__main__':
 
       multiple_run_args = {
     
-            'epochs': 1, 
+            'epochs': 20, 
             'n_classifiers': 45,
-            'question_no': '1.4.3',
-            'convergence_epochs': 1,
+            'question_no': question_no,
+            'convergence_epochs': 2,
             'fit_type': 'one_vs_one',
             'check_convergence': True,
             'kernel_type': 'polynomial',
@@ -321,4 +321,3 @@ if __name__ == '__main__':
         }
 
       train_loss, val_loss, train_total_confidences, val_total_confidences, train_votes, val_votes, train_preds, val_preds, Y_train, Y_val = run_multiple(params, data_args, **multiple_run_args)
-
