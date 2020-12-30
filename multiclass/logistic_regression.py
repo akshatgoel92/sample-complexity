@@ -136,14 +136,15 @@ if __name__ == '__main__':
     # Load full dataset
     X, Y = helpers.load_data(data_args['data_path'], data_args['name'])
     
-
     # Shuffle and split dataset
     X_shuffle, Y_shuffle, perm = helpers.shuffle_data(X,Y)
     
     # Split dataset
     X_train, X_val, Y_train, Y_val, _, _ = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
 
-
+    # Train
     W, history = train(X_train, Y_train)
 
-    predict(X_val, Y_val, W)
+    # Evaluate
+    val_loss = predict(X_val, Y_val, W)
+
