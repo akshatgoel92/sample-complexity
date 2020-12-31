@@ -8,10 +8,12 @@ class SAMME():
     Multi-class Adaboost (SAMME)
     Saharon Rossett, Trevor Hastie, Jia Zhu (2006)
     '''
-    def __init__(self, n_classes, n_learners, X_train, Y_train):
+    def __init__(self, lr, epochs, n_classes, n_learners, X_train, Y_train):
         '''
         Initialize all parameters
         '''
+        self.lr = lr
+        self.epochs = epochs
         self.X_train = X_train
         self.Y_train = Y_train
         self.n_classes = n_classes
@@ -24,6 +26,7 @@ class SAMME():
         self.w = np.full(self.n_samples, (1 / self.n_samples), dtype=np.float32)
         self.learner_weights = np.zeros((self.n_learners,), dtype=np.float32)
         self.learners = []
+        self.learner_mistakes = []
 
 
     def resample(self):
@@ -32,9 +35,6 @@ class SAMME():
         as opposed to reweighting
         '''
         new_obs = np.random.choice(np.arange(self.n_samples), size=self.n_samples, p=self.w)
-
-        print(np.unique(new_obs, return_counts=True))
-
         X_train_new = self.X_train[new_obs, :]
         Y_train_new = self.Y_train[new_obs]
 
@@ -53,14 +53,15 @@ class SAMME():
         Y_train_new = np.copy(self.Y_train)
 
         
-        
         for learner_id in range(self.n_learners):
 
-            learner = LogisticRegression(lr=0.01, epochs=1000, n_classes=self.n_classes, 
+            learner = LogisticRegression(lr=self.lr, epochs=self.epochs, n_classes=self.n_classes, 
                                          n_features=self.n_features, X_train=X_train_new, Y_train=Y_train_new)
 
             # Train weak learner
             learner.train()
+
+            print(learner_id)
             
             # Get predictions
             preds, loss = learner.predict(self.X_train, self.Y_train)
@@ -68,7 +69,7 @@ class SAMME():
             # Calculate mistakes
             mistakes = (preds != self.Y_train).astype(int)
 
-            print(np.sum(mistakes)/len(Y_train))
+            self.learner_mistakes.append((np.sum(mistakes)/len(Y_train)))
 
             # Compute the weighted learner error
             weighted_learner_error = np.sum(mistakes * self.w)/np.sum(self.w)
@@ -103,13 +104,13 @@ class SAMME():
 
         for learner_id, learner in enumerate(self.learners):
             
-            
+
             preds, _ = learner.predict(X, Y)
 
             preds = preds.astype(int)
 
             # Encode the prediction in to balanced array
-            prediction = np.full((self.n_classes, len(Y)), fill_value=-1/(self.n_classes-1), dtype=np.float32)
+            prediction = np.full((self.n_classes, len(Y)), fill_value= -1/(self.n_classes-1), dtype=np.float32)
 
             for obs, pred in enumerate(list(preds)):
 
@@ -151,9 +152,13 @@ if __name__ == '__main__':
 
    n_classes=10
    
-   n_learners=2
+   n_learners=100
 
-   example_samme = SAMME(n_classes, n_learners, X_train, Y_train)
+   lr = 0.10
+
+   epochs = 5
+
+   example_samme = SAMME(lr, epochs, n_classes, n_learners, X_train, Y_train)
 
    example_samme.train()
 
@@ -161,7 +166,12 @@ if __name__ == '__main__':
 
    preds, val_loss = example_samme.predict(X_val, Y_val)
 
-   print(loss, val_loss)
+   learner_error = np.array(example_samme.learner_mistakes)
 
+   min_learner_error = np.min(learner_error)
 
+   max_learner_error = np.max(learner_error)
 
+   avg_learner_error = np.mean(learner_error)
+
+   print(loss, val_loss, min_learner_error, max_learner_error, avg_learner_error)
