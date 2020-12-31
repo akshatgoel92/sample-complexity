@@ -44,7 +44,6 @@ class LogisticRegression():
         return(np.hstack((np.ones((max(X.shape),1)),X)))
 
 
-
     def get_cost(self, Y_encoding, a, n_examples):
         '''
         Returns cross entropy loss
@@ -83,13 +82,12 @@ class LogisticRegression():
         Update weights according to gradient descent rule
         '''
 
-        self.X_train = self.add_bias(X_train)
+        self.X_train = self.add_bias(self.X_train)
 
         for epoch in range(self.epochs):
 
             a = self.predict_softmax(self.X_train, self.W)
             cost = self.get_cost(self.Y_encoding, a, self.n_examples)
-            print(cost)
 
             W = self.get_gradient_descent_step(a) 
             self.history.append(cost)
