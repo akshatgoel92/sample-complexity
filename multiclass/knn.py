@@ -161,7 +161,7 @@ if __name__ == '__main__':
     # Shuffle and split dataset
     X_shuffle, Y_shuffle, perm = helpers.shuffle_data(X,Y)
 
-    k = 9
+    k = 2
     
     # Split dataset
     X_train, X_val, Y_train, Y_val, _, _ = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
