@@ -25,9 +25,6 @@ def train_perceptron(X, Y, X_val, Y_val, epochs, lr):
     
     # History goes here
     history = {
-        "weights": [w],
-        "losses": [], 
-        "biases": [b],
         "train_loss": [],
         "val_loss": []
     }
