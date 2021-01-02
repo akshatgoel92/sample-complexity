@@ -410,7 +410,7 @@ if __name__ == '__main__':
   
   np.random.seed(1123)
 
-  question_no = 'cv_one_vs_one'
+  question_no = 'multiple_one_vs_one'
 
   if question_no == 'test':
 

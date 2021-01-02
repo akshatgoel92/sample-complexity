@@ -18,12 +18,12 @@ def open_results(question_no, id):
     return(results)
 
 
-def compute_final_cf(n_classes = 10, question_no='1.2', id=31, dest = '../results/confusion_matrix.csv'):
+def compute_final_cf(n_classes = 10, question_no='1.2', id=31, dest = './results/confusion_matrix_correct.csv'):
     '''
     Post-process the final CF into the format required by
     the question
     '''
-    results = helpers.open_results(question_no, id)
+    results = open_results(question_no, id)
     
     test_cf = results['test_cf']
     
@@ -33,7 +33,7 @@ def compute_final_cf(n_classes = 10, question_no='1.2', id=31, dest = '../result
         np.fill_diagonal(result, 0)
         cf = np.add(cf, result)
 
-    cf = pd.DataFrame(np.divide(cf, np.sum(cf))*100)
+    cf = pd.DataFrame(cf/cf.sum(axis=1,keepdims=1)*100)
 
     cf.to_csv(dest)
 

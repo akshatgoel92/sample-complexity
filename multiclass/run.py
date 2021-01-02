@@ -404,6 +404,68 @@ if __name__ == '__main__':
         run_multiple(params, data_args, **multiple_run_args)
 
 
+    if '1.1_polynomial_convergence' in question_no:
+
+        np.random.seed(139280)
+
+
+        # Store arguments for this
+        multiple_run_args = {
+    
+            'epochs': 20, 
+            'n_classifiers': 10,
+            'question_no': question_no,
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': False,
+            'kernel_type': 'polynomial',
+            'total_runs': 5
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+    if '1.1_extended_polynomial_convergence_check' in question_no:
+
+        np.random.seed(139280)
+
+
+        # Store arguments for this
+        multiple_run_args = {
+    
+            'epochs': 30, 
+            'n_classifiers': 10,
+            'question_no': question_no,
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': False,
+            'kernel_type': 'polynomial',
+            'total_runs': 5
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+    if '1.1_2_epochs_polynomial_convergence_check' in question_no:
+
+        np.random.seed(139280)
+
+
+        # Store arguments for this
+        multiple_run_args = {
+    
+            'epochs': 20, 
+            'n_classifiers': 10,
+            'question_no': question_no,
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': True,
+            'kernel_type': 'polynomial',
+            'total_runs': 5
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+
+    
     if '1.1_polynomial_get_images_cv' in question_no:
 
         params = [1, 2, 3, 4, 5, 6, 7]
@@ -428,10 +490,14 @@ if __name__ == '__main__':
         print("Add code here to get final confusion matrix...")
 
 
-    if '1.5_gaussian_multiple' in question_no:
+    if '1.5_gaussian_grid_search' in question_no:
+        
+        np.random.seed(138092)
 
+        params = list(np.arange(0.01, 1, 0.01))
 
-        # Store arguments for this
+        print(params)
+
         multiple_run_args = {
     
             'epochs': 20, 
@@ -439,28 +505,58 @@ if __name__ == '__main__':
             'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
-            'check_convergence': True,
+            'check_convergence': False,
             'kernel_type': 'gaussian',
-            'total_runs': 20 
+            'total_runs': 1 
         }
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if '1.5_gaussian_cv' in question_no:
+    if '1.5_2_gaussian_grid_search_with_convergence_check' in question_no:
+        
+        np.random.seed(138092)
 
-        cv_args = {
+        params = list(np.arange(0.01, 0.51, 0.01))
+
+        print(params)
+
+        multiple_run_args = {
     
-            'epochs': 18,
-            'n_classifiers': 10, 
+            'epochs': 20, 
+            'n_classifiers': 10,
             'question_no': question_no,
             'convergence_epochs': 2,
             'fit_type': 'one_vs_all',
             'check_convergence': False,
             'kernel_type': 'gaussian',
-            'total_runs': 20 
+            'total_runs': 5 
         }
 
-        run_multiple_cv(params, data_args, **cv_args)
+        run_multiple(params, data_args, **multiple_run_args)
+
+
+    if '1.5_2_gaussian_grid_search' in question_no:
+        
+        np.random.seed(138092)
+
+        params = list(np.arange(0.001, 0.021, 0.001))
+
+        print(params)
+
+        multiple_run_args = {
+    
+            'epochs': 20, 
+            'n_classifiers': 10,
+            'question_no': question_no,
+            'convergence_epochs': 2,
+            'fit_type': 'one_vs_all',
+            'check_convergence': False,
+            'kernel_type': 'gaussian',
+            'total_runs': 5 
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
 
 
     if '1.5_gaussian_multiple' in question_no:

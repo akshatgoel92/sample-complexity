@@ -8,7 +8,7 @@ class SAMME():
     Multi-class Adaboost (SAMME)
     Saharon Rossett, Trevor Hastie, Jia Zhu (2006)
     '''
-    def __init__(self, lr, epochs, n_classes, n_learners, X_train, Y_train):
+    def __init__(self, lr, epochs, n_classes, n_learners, X_train, Y_train, X_val, Y_val):
         '''
         Initialize all parameters
         '''
@@ -16,6 +16,8 @@ class SAMME():
         self.epochs = epochs
         self.X_train = X_train
         self.Y_train = Y_train
+        self.X_val = X_val
+        self.Y_val = Y_val
         self.n_classes = n_classes
         self.n_learners = n_learners
         self.n_samples = max(self.X_train.shape)
@@ -27,6 +29,7 @@ class SAMME():
         self.learner_weights = np.zeros((self.n_learners,), dtype=np.float32)
         self.learners = []
         self.learner_mistakes = []
+        self.history = {'train_loss': [], 'val_loss': []}
 
 
     def resample(self):
@@ -94,7 +97,7 @@ class SAMME():
         self.learner_weights = self.learner_weights/np.sum(self.learner_weights)
 
 
-    def predict(self, X, Y):
+    def validate(self, X, Y):
         """
         Predict using the boosted learner
         :param X:
@@ -127,6 +130,19 @@ class SAMME():
         return pooled_predictions, loss
 
 
+    def fit(self):
+      '''
+      '''
+      self.train()
+      _, train_loss = self.validate(self.X_train, self.Y_train)
+      _, val_loss = self.validate(self.X_val, self.Y_val)
+        
+      self.history['train_loss'].append(train_loss)
+      self.history['val_loss'].append(val_loss)
+
+      return(self.history)
+
+
 
 if __name__ == '__main__':
 
@@ -134,7 +150,7 @@ if __name__ == '__main__':
 
    data_args = {
 
-        'data_path': '../data',
+        'data_path': './data',
         'name': 'zipcombo.dat', 
         'train_percent': 0.8,
         'k': 5,
@@ -158,20 +174,8 @@ if __name__ == '__main__':
 
    epochs = 5
 
-   example_samme = SAMME(lr, epochs, n_classes, n_learners, X_train, Y_train)
+   example_samme = SAMME(lr, epochs, n_classes, n_learners, X_train, Y_train, X_val, Y_val)
 
-   example_samme.train()
+   history = example_samme.fit()
 
-   preds, loss = example_samme.predict(X_train, Y_train)
-
-   preds, val_loss = example_samme.predict(X_val, Y_val)
-
-   learner_error = np.array(example_samme.learner_mistakes)
-
-   min_learner_error = np.min(learner_error)
-
-   max_learner_error = np.max(learner_error)
-
-   avg_learner_error = np.mean(learner_error)
-
-   print(loss, val_loss, min_learner_error, max_learner_error, avg_learner_error)
+   print(history)
