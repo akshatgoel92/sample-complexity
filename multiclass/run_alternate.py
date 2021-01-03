@@ -221,7 +221,7 @@ if __name__ == '__main__':
 
     np.random.seed(13290320)
 
-    question_no = 'cv'
+    question_no = 'multiple'
 
     data_args = {
 
@@ -236,11 +236,13 @@ if __name__ == '__main__':
 
     if question_no == 'multiple':
 
-        params = [1, 2]
+        np.random.seed(2312319)
+
+        params = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
         multiple_run_args = {
     
-            'total_runs': 3,
+            'total_runs': 5,
             'model': 'knn',
             'question_no': question_no
         }

@@ -2,6 +2,7 @@ import json
 import numpy as np 
 import matplotlib.pyplot as plt
 from linear_regression import *
+from vanilla_perceptron import *
 
 
 
@@ -11,12 +12,14 @@ def run_sample_complexity(n,
                           max_iter=100, 
                           step_size=1, 
                           n_test=20, 
+                          n_train = 20,
                           target_test_error=0.1, 
                           size_test=100):
     '''
     Run sample complexity code
     '''
     test_sets = [helpers.get_binary_data(size_test, n) for i in range(n_test)]
+
     avg_test_error = np.inf
     converged = False
     m = min_m
@@ -31,27 +34,27 @@ def run_sample_complexity(n,
                 "avg_test_error": [], 
                 "converged": "", 
                 "final_m":""}
-
-    X, Y = helpers.get_binary_data(min_m + max_iter, n)
     
+    train_sets = [helpers.get_binary_data(min_m + max_iter, n) for i in range(n_train)]
     
     for m in range(min_m, max_iter, step_size):
 
-        X_train = X[:m, :]
-        Y_train = Y[:m]
+        current_train_m = [(X_train[:m, :], Y_train[:m]) for X_train, Y_train in train_sets]
         
-
         if model_name == 'linear_regression':
-            model = LinearRegression(X_train,Y_train)
+            models = [LinearRegression(X_train,Y_train) for X_train, Y_train in current_train_m]
+        if model_name == 'linear_perceptron':
+            models = [LinearRegression(X_train,Y_train) for X_train, Y_train in current_train_m]
+
         
-        train_error = model.fit()
-        all_test_errors = [model.validate(X_test, Y_test) for X_test, Y_test in test_sets]
-        avg_test_error = np.mean(np.array(all_test_errors))
+        train_errors = [model.fit() for model in models]
+        all_test_errors = [[model.validate(X_test, Y_test) for X_test, Y_test in test_sets] for model in models]
+        avg_test_errors = [np.mean(np.array(test_errors)) for test_errors in all_test_errors]
 
         history["m"].append(m)
-        history["avg_test_error"].append(avg_test_error)
+        history["avg_test_error"].append(avg_test_errors)
 
-        if avg_test_error <= target_test_error:
+        if np.mean(np.array(avg_test_errors)) <= target_test_error:
             
             converged = True
             history["converged"] = converged
@@ -90,6 +93,7 @@ def run_experiment(model_name = "linear_regression", max_n=100):
     start_n = len(experiment) + 1
 
     for n in range(start_n, max_n + 1):
+        print(n)
         history = run_sample_complexity(n, min_m = 1)
         if history['converged']:
             experiment.append(history)
@@ -148,8 +152,8 @@ if __name__ == '__main__':
     np.random.seed(182390)
     new = 1
     
-    #if new == 1:
-        # create_new_experiment_file()
+    if new == 1:
+        create_new_experiment_file()
     
-    # run_experiment()
+    run_experiment()
     plot_experiment()

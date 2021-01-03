@@ -490,28 +490,6 @@ if __name__ == '__main__':
         print("Add code here to get final confusion matrix...")
 
 
-    if '1.5_gaussian_grid_search' in question_no:
-        
-        np.random.seed(138092)
-
-        params = list(np.arange(0.01, 1, 0.01))
-
-        print(params)
-
-        multiple_run_args = {
-    
-            'epochs': 20, 
-            'n_classifiers': 10,
-            'question_no': question_no,
-            'convergence_epochs': 2,
-            'fit_type': 'one_vs_all',
-            'check_convergence': False,
-            'kernel_type': 'gaussian',
-            'total_runs': 1 
-        }
-
-        run_multiple(params, data_args, **multiple_run_args)
-
     if '1.5_2_gaussian_grid_search_with_convergence_check' in question_no:
         
         np.random.seed(138092)
@@ -559,9 +537,9 @@ if __name__ == '__main__':
 
 
 
-    if '1.5_gaussian_multiple' in question_no:
+    if '1.5_3_gaussian_multiple' in question_no:
 
-        params = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
+        params = [0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017]
         
         print(params)
 
@@ -579,9 +557,9 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if '1.5_gaussian_cv' in question_no:
+    if '1.5_3_gaussian_cv' in question_no:
 
-        params = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
+        params = [0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017]
         
         print(params)
 
