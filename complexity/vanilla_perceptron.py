@@ -3,7 +3,7 @@ import helpers
 import numpy as np
 
 
-class LinearPerceptron():
+class Perceptron():
 
 
     def __init__(self, X_train, Y_train, epochs):
@@ -42,7 +42,7 @@ class LinearPerceptron():
         for epoch in range(self.epochs):
         
             mistakes=0
-
+            
             # Do this for each example in the dataset
             for i in range(self.X_train.shape[0]):
 
@@ -61,7 +61,6 @@ class LinearPerceptron():
                 # 1) Update the weights and biases in the direction of the label
                 if y_hat != y_i:
                     mistakes+=1
-                    print(mistakes)
                     w += (y_i - y_hat)*x_i
                     b += (y_i - y_hat)
                 

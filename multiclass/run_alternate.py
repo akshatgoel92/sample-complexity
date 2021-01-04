@@ -1,4 +1,5 @@
 from knn import *  
+import argparse
 import time
 
 
@@ -221,7 +222,14 @@ if __name__ == '__main__':
 
     np.random.seed(13290320)
 
-    question_no = 'multiple'
+    parser = argparse.ArgumentParser(description='List the content of a folder')
+    
+    parser.add_argument('question_no',
+                         type=str, 
+                         help='Specify the question number...')
+    
+    args = parser.parse_args()
+    question_no = args.question_no
 
     data_args = {
 
@@ -234,7 +242,7 @@ if __name__ == '__main__':
 
         run_test_case()
 
-    if question_no == 'multiple':
+    if question_no == 'knn_grid':
 
         np.random.seed(2312319)
 
@@ -249,9 +257,24 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if question_no == 'cv':
 
-        params = [1, 2, 3]
+    if question_no == 'knn_multiple':
+
+        params = [1, 2, 3, 4, 5, 6, 7]
+
+        multiple_run_args = {
+    
+            'total_runs': 20,
+            'model': 'knn',
+            'question_no': question_no
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+
+    if question_no == 'knn_cv':
+
+        params = [1, 2, 3, 4, 5, 6, 7]
 
         cv_args = {
             

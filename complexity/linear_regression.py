@@ -54,20 +54,3 @@ class LinearRegression():
         self.val_loss = helpers.get_loss(Y_val, y_hat_val)
 
         return(self.val_loss)
-
-
-
-
-
-
-if __name__ == '__main__':
-    
-    np.random.seed(102938120)
-
-    # Set parameters
-    m = 10
-    n = 1000
-    
-    # Call training function
-    history = get_regression(m, n)
-    print(history)

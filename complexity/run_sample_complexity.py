@@ -12,9 +12,10 @@ def run_sample_complexity(n,
                           max_iter=100, 
                           step_size=1, 
                           n_test=20, 
-                          n_train = 20,
+                          n_train = 200,
                           target_test_error=0.1, 
-                          size_test=100):
+                          size_test=100,
+                          online_epochs=100):
     '''
     Run sample complexity code
     '''
@@ -44,7 +45,7 @@ def run_sample_complexity(n,
         if model_name == 'linear_regression':
             models = [LinearRegression(X_train,Y_train) for X_train, Y_train in current_train_m]
         if model_name == 'linear_perceptron':
-            models = [LinearRegression(X_train,Y_train) for X_train, Y_train in current_train_m]
+            models = [Perceptron(X_train,Y_train, online_epochs) for X_train, Y_train in current_train_m]
 
         
         train_errors = [model.fit() for model in models]
@@ -81,7 +82,7 @@ def create_new_experiment_file(model_name = 'linear_regression'):
 
 
 
-def run_experiment(model_name = "linear_regression", max_n=100):
+def run_experiment(model_name = "linear_regression", max_n=100, online_epochs=100):
     '''
     Load existing experiment file, run experiment, append results,
     write experiment file
@@ -94,7 +95,7 @@ def run_experiment(model_name = "linear_regression", max_n=100):
 
     for n in range(start_n, max_n + 1):
         print(n)
-        history = run_sample_complexity(n, min_m = 1)
+        history = run_sample_complexity(n, min_m = 1, model_name=model_name, online_epochs=online_epochs)
         if history['converged']:
             experiment.append(history)
 
@@ -114,7 +115,7 @@ def write_experiment(model_name, experiment):
         json.dump(experiment, f)
 
 
-def get_experiment(model_name = "linear_regression"):
+def get_experiment(model_name):
     '''
     Load a particular experiment
     '''
@@ -129,7 +130,7 @@ def get_experiment(model_name = "linear_regression"):
     return(experiment)
 
 
-def plot_experiment(model_name = "linear_regression"):
+def plot_experiment(model_name):
     '''
     Make a plot of the experiment
     '''
@@ -150,10 +151,10 @@ def plot_experiment(model_name = "linear_regression"):
 if __name__ == '__main__':
 
     np.random.seed(182390)
-    new = 1
+    new = 0
     
     if new == 1:
-        create_new_experiment_file()
+        create_new_experiment_file(model_name="linear_perceptron")
     
-    run_experiment()
-    plot_experiment()
+    run_experiment(model_name="linear_perceptron", max_n=35)
+    plot_experiment(model_name="linear_perceptron")
