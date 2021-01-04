@@ -150,15 +150,7 @@ def train_perceptron(Y_encoding, K_train, K_val, K_i, n_samples,
 
     
     if fit_type == 'one_vs_one':
-        Y_hat_train, preds_train = get_final_predictions_one_vs_one(alpha, K_train)
-        Y_hat_val, preds_val = get_final_predictions_one_vs_one(alpha, K_val)
-        train_loss = helpers.get_loss(Y_train, preds_train)
-        
-        history = {}
-        history['Y_hat_train'] = Y_hat_train
-        history['Y_hat_val'] = Y_hat_val
-        history['preds_train'] = preds_train
-        history['preds_val'] = preds_val
+        history = {'alpha': alpha}
 
     # Return statement
     return(history)

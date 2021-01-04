@@ -4,6 +4,73 @@ import helpers
 import time
 
 
+def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
+                     epochs, n_classifiers, question_no, convergence_epochs, fit_type, 
+                     check_convergence, kernel_type, d, n_classes, Y_train, Y_val, K_train, K_val):
+  '''
+  Train one vs one classifer
+  '''
+  alpha_weights = np.zeros((n_classifiers, n_train))
+  classifiers_per_training = 1
+  
+  for k, data in enumerate(datasets):
+
+      i, j = tracker[k]
+      train_mask, _ = masks[k]
+
+      settings = perceptron.train_setup(*data, fit_type, 
+                                        classifiers_per_training, 
+                                        d, kernel_type, neg = i, pos = j)
+
+      # Now train
+      history = perceptron.train_perceptron(*settings, *data, epochs, 
+                                             classifiers_per_training, 
+                                             question_no, convergence_epochs, fit_type, 
+                                             check_convergence, neg=i, pos=j)
+
+      # Store predictions and confidences
+      alpha_weights[k, train_mask] = history['alpha']
+
+  # Return predictions
+  train_confidences = alpha_weights @ K_train
+  val_confidences = alpha_weights @ K_val
+  train_preds, val_preds = get_predictions(alpha_weights, K_train, K_val)
+  
+  train_loss = helpers.get_loss(train_preds, Y_train)
+  val_loss = helpers.get_loss(val_preds, Y_val)
+
+  print("Overall train loss {}, Overall val loss {}".format(train_loss, val_loss))
+
+  return train_loss, val_loss
+
+
+def get_predictions(alpha_weights, tracker, train_confidences, val_confidences):
+    '''
+    Update results from kth classifier
+    '''
+    k = 0
+    
+    for i in range(n_classes):
+        for j in range(i+1, n_classes)
+
+        # Check whether we have the right classifier at each iteration
+        assert tracker[k] == (i, j)
+        
+        # Update the overall confidences and vote counts
+        train_total_confidences[i, :] -= train_confidences[k, :]
+        train_total_confidences[j, :] += train_confidences[k, :]
+      
+        # Update the confidences
+        val_total_confidences[i, :] -= val_confidences[k, :]
+        val_total_confidences[j, :] += val_confidences[k, :]
+        k += 1
+
+    train_preds = np.argmax(train_total_confidences, axis=0)
+    val_preds = np.argmax(val_total_confidences, axis = 0)
+
+    return(train_preds, val_preds)
+
+
 def subset_data(X_train, Y_train, X_val, Y_val, n_classes):
   '''
   Get data subsets for 1 v 1 classifier
@@ -38,97 +105,6 @@ def subset_data(X_train, Y_train, X_val, Y_val, n_classes):
       k+=1
 
   return(data, tracker, masks)
-
-
-def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
-                     epochs, n_classifiers, question_no, convergence_epochs, fit_type, 
-                     check_convergence, kernel_type, d, n_classes, Y_train, Y_val):
-  '''
-  Train one vs one classifer
-  '''
-  train_predictions = np.zeros((n_classifiers, n_train))
-  train_confidences = np.zeros((n_classifiers, n_train))
-  
-  val_predictions = np.zeros((n_classifiers, n_val))
-  val_confidences = np.zeros((n_classifiers, n_val))
-
-  train_votes = np.zeros((n_classes, n_train))
-  val_votes = np.zeros((n_classes, n_val))
-
-  val_total_confidences = np.zeros((n_classes, n_val))
-  train_total_confidences = np.zeros((n_classes, n_train))
-  
-  classifiers_per_training = 1
-  
-  for k, data in enumerate(datasets):
-
-      i, j = tracker[k]
-      train_mask, val_mask = masks[k]
-
-      settings = perceptron.train_setup(*data, fit_type, 
-                                        classifiers_per_training, d, kernel_type, neg = i, pos = j)
-
-                  
-      # Now train
-      history = perceptron.train_perceptron(*settings, *data, epochs, 
-                                             classifiers_per_training, 
-                                             question_no, convergence_epochs, fit_type, 
-                                             check_convergence, neg=i, pos=j)
-
-      # Store predictions and confidences
-      train_predictions[k, train_mask] = history['preds_train']
-      train_confidences[k, train_mask] = history['Y_hat_train']
-      
-      # Store the validation predictions
-      val_predictions[k, val_mask] = history['preds_val']
-      val_confidences[k, val_mask] = history['Y_hat_val']
-
-
-      # Update results
-      results = update_results(train_total_confidences, val_total_confidences, 
-                               train_votes, val_votes, train_confidences, 
-                               val_confidences, train_predictions, 
-                               val_predictions, i, j, k)
-
-      # Unpack updated results
-      train_total_confidences, val_total_confidences, train_votes, val_votes = results
-
-  # Return predictions
-  train_preds = np.argmax(train_total_confidences, axis = 0)
-  val_preds = np.argmax(val_total_confidences, axis = 0)
-
-  train_loss = helpers.get_loss(train_preds, Y_train)
-  val_loss = helpers.get_loss(val_preds, Y_val)
-
-  print("Overall train loss {}, Overall val loss {}".format(train_loss, val_loss))
-
-  return train_loss, val_loss
-
-
-def update_results(train_total_confidences, val_total_confidences, 
-                   train_votes, val_votes, train_confidences, 
-                   val_confidences, train_predictions, 
-                   val_predictions, i, j, k):
-    '''
-    Update results from kth classifier
-    '''
-    # Update the overall confidences and vote counts
-    train_total_confidences[i, :] -= train_confidences[k, :]
-    train_total_confidences[j, :] += train_confidences[k, :]
-      
-    # Update the confidences
-    val_total_confidences[i, :] -= val_confidences[k, :]
-    val_total_confidences[j, :] += val_confidences[k, :]
-
-    # Update the votes
-    train_votes[i, train_predictions[k, :] == -1] += 1
-    train_votes[j, train_predictions[k, :] == +1] += 1
-      
-    val_votes[i, val_predictions[k, :] == -1] += 1
-    val_votes[j, val_predictions[k, :] == +1] += 1
-
-    return(train_total_confidences, val_total_confidences, 
-           train_votes, val_votes)
 
 
 
@@ -185,6 +161,7 @@ def run_multiple(params, data_args, epochs, n_classifiers,
     all_splits = []
     all_masks = []
     all_trackers = []
+    all_gram = []
 
     for run in range(total_runs):
 
@@ -192,16 +169,21 @@ def run_multiple(params, data_args, epochs, n_classifiers,
       # Shuffle the dataset before splitting it and then split into training and validation set
       X_shuffle, Y_shuffle, perm = helpers.shuffle_data(X,Y)
       X_train, X_val, Y_train, Y_val, _, _ = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
+
             
       # Convert data to integer
       Y_train = Y_train.astype(int)
       Y_val = Y_val.astype(int)
+
+      K_train = helpers.get_polynomial_kernel(X_train, X_train)
+      K_val = helpers.get_polynomial_kernel(X_train, X_val)
 
       datasets, tracker, masks = subset_data(X_train, Y_train, X_val, Y_val, n_classes)
       all_splits.append((X_train, X_val, Y_train, Y_val))
       all_subset_datasets.append(datasets)
       all_trackers.append(tracker)
       all_masks.append(masks)
+      all_gram.append((K_train, K_val))
 
     # These remains constant over different splits
     n_train = len(Y_train)
