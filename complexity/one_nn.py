@@ -1,18 +1,19 @@
-import numpy as np
 import helpers
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 
 
+class KNN:
 
-class OneNN():
 
+    def __init__(self, k, X_train, Y_train):
 
-    def __init__(self, X_train, Y_train):
-
-        self.predictions = []
+        self.k = k
         self.X_train = X_train
-        self.Y_train = Y_train
+        self.Y_train = Y_train.astype(int)
+        self.distance_method = 'euclidean'
         self.val_loss = -1
 
 
@@ -51,44 +52,39 @@ class OneNN():
         Train one nearest neighbor
         '''
         # Calculate distance between validation point and each training point
-        distance = self.get_euclidean_dist(X_val, X_train)
-    
-        # Store no. of validation samples
-        n_val_samples = X_val.shape[0]
+        val_distance = self.get_euclidean_dist(X_val, self.X_train)
+        
+        val_sorted_distances = np.argsort(val_distance, axis = 1)[:, :self.k]
+
+        n_val_samples = len(Y_val)
+
+        val_predictions = []
 
         # Loop through validation samples
         for i in range(n_val_samples):
         
             # Labels of nearest neighbors
-            labels = Y_train[np.where(distance[i] == np.min(distance[i]))]
+            labels = self.Y_train[val_sorted_distances[i]]
         
             # Predictions based on nearest neighbor labels
-            prediction = np.sign(np.sum(labels))
-        
-            # Add prediction to sequence
-            if prediction == 0: 
-                self.predictions.append(np.random.choice([1, -1]))
-            else: 
-                self.predictions.append(prediction)
+            candidates, votes = np.unique(labels, return_counts = True)
+            # print("Votes:")
+            # print(candidates, votes)
 
-        # Wrap predictions in an array
-        self.predictions = np.array(self.predictions)
+            decision = np.where(votes == np.max(votes))[0].astype(int)
 
-        # Calculate validation loss
-        self.val_loss = helpers.get_loss(Y_val, self.predictions)
+            # print("Decision:")
+            # print(decision)
+
+            candidates = candidates[decision]
+            # print(candidates)
+
+            if len(votes > 1):
+                val_predictions.append(np.random.choice(candidates, size=1)[0])
+
+            else:
+                val_predictions.append(candidates[0])
+
+        self.val_loss = helpers.get_loss(Y_val, val_predictions)
 
         return(self.val_loss)
-
-
-
-if __name__ == '__main__':
-    m = 90
-    n = 8
-    
-    X, Y = helpers.get_binary_data(m, n)
-    X_train, X_val, Y_train, Y_val = helpers.split_data(X, Y, 0.8)
-
-    one_nn = OneNN(X_train, Y_train)
-    val_loss = one_nn.validate(X_val, Y_val)
-
-    print(val_loss)

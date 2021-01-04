@@ -49,6 +49,8 @@ def train_winnow(X, Y, X_val, Y_val, epochs, lr):
                 y_i = 0 
 
             
+
+            
             # Compute the prediction with the current weights
             if (np.dot(w, x_i) + b >= n): y_hat = 1
             else: y_hat = 0

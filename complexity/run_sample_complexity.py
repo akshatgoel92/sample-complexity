@@ -13,7 +13,7 @@ def run_sample_complexity(n,
                           max_iter=100, 
                           step_size=1, 
                           n_test=20, 
-                          n_train = 15,
+                          n_train = 100,
                           target_test_error=0.1, 
                           size_test=100,
                           online_epochs=100):
@@ -52,7 +52,7 @@ def run_sample_complexity(n,
             models = [Perceptron(X_train,Y_train, online_epochs) for X_train, Y_train in current_train_m]
 
         if model_name == 'one_nn':
-            models = [OneNN(X_train, Y_train) for X_train, Y_train in current_train_m]
+            models = [KNN(1, X_train, Y_train) for X_train, Y_train in current_train_m]
 
         if model_name != 'one_nn':
             train_errors = [model.fit() for model in models]
@@ -92,7 +92,7 @@ def create_new_experiment_file(model_name):
 
 
 
-def run_experiment(model_name, max_n, online_epochs):
+def run_experiment(model_name, max_n, online_epochs, min_m, max_iter):
     '''
     Load existing experiment file, run experiment, append results,
     write experiment file
@@ -106,8 +106,9 @@ def run_experiment(model_name, max_n, online_epochs):
     for n in range(start_n, max_n + 1):
         print(n)
         history = run_sample_complexity(n, 
-                                        min_m = 1, 
+                                        min_m, 
                                         model_name=model_name, 
+                                        max_iter = max_iter,
                                         online_epochs=online_epochs)
         if history['converged']:
             experiment.append(history)
@@ -165,12 +166,14 @@ if __name__ == '__main__':
 
     np.random.seed(182390)
     new = 1
+    min_m = 1
     max_n = 35
+    max_iter = 1000
     model_name = "one_nn"
     online_epochs=100
 
     if new == 1:
         create_new_experiment_file(model_name=model_name)
     
-    run_experiment(model_name=model_name, max_n=max_n, online_epochs=online_epochs)
+    run_experiment(model_name=model_name, max_n=max_n, online_epochs=online_epochs, min_m=min_m, max_iter=max_iter)
     plot_experiment(model_name=model_name)
