@@ -34,7 +34,9 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
   # Return predictions
   train_confidences = alpha_weights @ K_train
   val_confidences = alpha_weights @ K_val
-  train_preds, val_preds = get_predictions(alpha_weights, K_train, K_val)
+
+  train_preds, val_preds = get_predictions(alpha_weights, tracker, train_confidences, val_confidences, 
+                                           n_classes, n_train, n_val)
   
   train_loss = helpers.get_loss(train_preds, Y_train)
   val_loss = helpers.get_loss(val_preds, Y_val)
@@ -44,26 +46,32 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
   return train_loss, val_loss
 
 
-def get_predictions(alpha_weights, tracker, train_confidences, val_confidences):
+def get_predictions(alpha_weights, tracker, train_confidences, val_confidences, 
+                    n_classes, n_train, n_val):
     '''
     Update results from kth classifier
     '''
     k = 0
+    val_total_confidences = np.zeros((n_classes, n_val))
+    train_total_confidences = np.zeros((n_classes, n_train))
+    
+    train_votes = np.zeros((n_classes, n_train))
+    val_votes = np.zeros((n_classes, n_val))
     
     for i in range(n_classes):
-        for j in range(i+1, n_classes)
+        for j in range(i+1, n_classes):
 
-        # Check whether we have the right classifier at each iteration
-        assert tracker[k] == (i, j)
+            # Check whether we have the right classifier at each iteration
+            assert tracker[k] == (i, j)
         
-        # Update the overall confidences and vote counts
-        train_total_confidences[i, :] -= train_confidences[k, :]
-        train_total_confidences[j, :] += train_confidences[k, :]
-      
-        # Update the confidences
-        val_total_confidences[i, :] -= val_confidences[k, :]
-        val_total_confidences[j, :] += val_confidences[k, :]
-        k += 1
+            # Update the overall confidences
+            train_total_confidences[i, :] -= train_confidences[k, :]
+            train_total_confidences[j, :] += train_confidences[k, :]
+
+            val_total_confidences[i, :] -= val_confidences[k, :]
+            val_total_confidences[j, :] += val_confidences[k, :]
+
+            k += 1
 
     train_preds = np.argmax(train_total_confidences, axis=0)
     val_preds = np.argmax(val_total_confidences, axis = 0)
@@ -114,8 +122,8 @@ def run_test_case_one_vs_one(epochs, n_classifiers, question_no, convergence_epo
     Execute the training steps above and generate
     the results that have been specified in the report
     '''
-    X_train, Y_train = helpers.load_data("data", "dtrain123.dat")
-    X_val, Y_val = helpers.load_data("data", "dtest123.dat")
+    X_train, Y_train = helpers.load_data("../data", "dtrain123.dat")
+    X_val, Y_val = helpers.load_data("../data", "dtest123.dat")
 
     Y_train = Y_train - 1
     Y_val = Y_val - 1
@@ -161,7 +169,6 @@ def run_multiple(params, data_args, epochs, n_classifiers,
     all_splits = []
     all_masks = []
     all_trackers = []
-    all_gram = []
 
     for run in range(total_runs):
 
@@ -175,15 +182,11 @@ def run_multiple(params, data_args, epochs, n_classifiers,
       Y_train = Y_train.astype(int)
       Y_val = Y_val.astype(int)
 
-      K_train = helpers.get_polynomial_kernel(X_train, X_train)
-      K_val = helpers.get_polynomial_kernel(X_train, X_val)
-
       datasets, tracker, masks = subset_data(X_train, Y_train, X_val, Y_val, n_classes)
       all_splits.append((X_train, X_val, Y_train, Y_val))
       all_subset_datasets.append(datasets)
       all_trackers.append(tracker)
       all_masks.append(masks)
-      all_gram.append((K_train, K_val))
 
     # These remains constant over different splits
     n_train = len(Y_train)
@@ -210,14 +213,18 @@ def run_multiple(params, data_args, epochs, n_classifiers,
 
           tracker = all_trackers[run]
           masks = all_masks[run]
-          _, _, Y_train, Y_val = all_splits[run]
+          X_train, X_val, Y_train, Y_val = all_splits[run]
+          
+          K_train = helpers.get_polynomial_kernel(X_train, X_train, param)
+          K_val = helpers.get_polynomial_kernel(X_train, X_val, param)
             
           # Now train
           train_loss, val_loss = train_one_vs_one(datasets, tracker, masks, n_train, n_val,
                                                   epochs, n_classifiers, question_no, 
                                                   convergence_epochs, fit_type, 
                                                   check_convergence, kernel_type, 
-                                                  param, n_classes, Y_train, Y_val)
+                                                  param, n_classes, Y_train, Y_val, 
+                                                  K_train, K_val)
             
           # Store results
           histories['train_loss'].append(train_loss)
@@ -419,7 +426,7 @@ if __name__ == '__main__':
   if question_no == 'multiple_one_vs_one':
 
       # Store kernel parameter list to iterate over
-      params = [1, 2, 3, 4, 5, 6, 7]
+      params = [7]
 
       # Store the arguments relating to the data set
       data_args = {
@@ -441,7 +448,7 @@ if __name__ == '__main__':
             'fit_type': 'one_vs_one',
             'check_convergence': True,
             'kernel_type': 'polynomial',
-            'total_runs': 20, 
+            'total_runs': 1, 
             'n_classes': 10
         }
 
