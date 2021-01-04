@@ -297,7 +297,6 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
         X_folds, Y_folds = helpers.get_k_folds(X_train, Y_train, data_args['k'])
 
         # Each fold will go here
-        
         subset_datasets_by_fold = []
         splits_by_fold = []
         masks_by_fold = []
@@ -335,7 +334,10 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
 
               tracker = trackers_by_fold[fold]
               masks = masks_by_fold[fold]
-              _, _, Y_train_fold, Y_val_fold = splits_by_fold[fold]
+              X_train_fold, Y_train_fold, Y_train_fold, Y_val_fold = splits_by_fold[fold]
+
+              K_train = helpers.get_polynomial_kernel(X_train_fold, X_train_fold, param)
+              K_val = helpers.get_polynomial_kernel(X_train_fold, X_val_fold, param)
 
               n_train_fold = len(Y_train_fold)
               n_val_fold = len(Y_val_fold)
@@ -345,7 +347,8 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
                                                       epochs, n_classifiers, question_no, 
                                                       convergence_epochs, fit_type, 
                                                       check_convergence, kernel_type, 
-                                                      param, n_classes, Y_train_fold, Y_val_fold)
+                                                      param, n_classes, Y_train_fold, Y_val_fold, 
+                                                      K_train_fold, K_val_fold)
 
               train_loss_by_fold.append(train_loss)
               val_loss_by_fold.append(val_loss)
