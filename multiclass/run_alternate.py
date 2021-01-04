@@ -204,8 +204,8 @@ def run_multiple_cv(params, data_args, total_runs, question_no, model):
         
         # Get retraining results and append
         results['best_param'].append(best_param)
-        results['train_loss'].append(history['train_loss'])
-        results['test_loss'].append(history['val_loss'])
+        results['train_loss'].append(history['train_loss'][0])
+        results['test_loss'].append(history['val_loss'][0])
 
         overall_run_no += 1
         print("This is overall run no {}".format(overall_run_no))
