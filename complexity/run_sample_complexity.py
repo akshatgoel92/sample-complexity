@@ -3,16 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from linear_regression import *
 from vanilla_perceptron import *
+from one_nn import *
 
 
 
 def run_sample_complexity(n, 
                           min_m, 
-                          model_name = 'linear_regression', 
+                          model_name, 
                           max_iter=100, 
                           step_size=1, 
                           n_test=20, 
-                          n_train = 200,
+                          n_train = 15,
                           target_test_error=0.1, 
                           size_test=100,
                           online_epochs=100):
@@ -40,22 +41,31 @@ def run_sample_complexity(n,
     
     for m in range(min_m, max_iter, step_size):
 
+        print('m' + str(m))
+
         current_train_m = [(X_train[:m, :], Y_train[:m]) for X_train, Y_train in train_sets]
         
         if model_name == 'linear_regression':
             models = [LinearRegression(X_train,Y_train) for X_train, Y_train in current_train_m]
+        
         if model_name == 'linear_perceptron':
             models = [Perceptron(X_train,Y_train, online_epochs) for X_train, Y_train in current_train_m]
 
+        if model_name == 'one_nn':
+            models = [OneNN(X_train, Y_train) for X_train, Y_train in current_train_m]
+
+        if model_name != 'one_nn':
+            train_errors = [model.fit() for model in models]
         
-        train_errors = [model.fit() for model in models]
         all_test_errors = [[model.validate(X_test, Y_test) for X_test, Y_test in test_sets] for model in models]
         avg_test_errors = [np.mean(np.array(test_errors)) for test_errors in all_test_errors]
 
         history["m"].append(m)
         history["avg_test_error"].append(avg_test_errors)
+        avg_test_error = np.mean(np.array(avg_test_errors))
+        print(avg_test_error)
 
-        if np.mean(np.array(avg_test_errors)) <= target_test_error:
+        if avg_test_error <= target_test_error:
             
             converged = True
             history["converged"] = converged
@@ -69,7 +79,7 @@ def run_sample_complexity(n,
     return(history)
 
 
-def create_new_experiment_file(model_name = 'linear_regression'):
+def create_new_experiment_file(model_name):
     '''
     Create new experiment file
     '''
@@ -82,7 +92,7 @@ def create_new_experiment_file(model_name = 'linear_regression'):
 
 
 
-def run_experiment(model_name = "linear_regression", max_n=100, online_epochs=100):
+def run_experiment(model_name, max_n, online_epochs):
     '''
     Load existing experiment file, run experiment, append results,
     write experiment file
@@ -95,7 +105,10 @@ def run_experiment(model_name = "linear_regression", max_n=100, online_epochs=10
 
     for n in range(start_n, max_n + 1):
         print(n)
-        history = run_sample_complexity(n, min_m = 1, model_name=model_name, online_epochs=online_epochs)
+        history = run_sample_complexity(n, 
+                                        min_m = 1, 
+                                        model_name=model_name, 
+                                        online_epochs=online_epochs)
         if history['converged']:
             experiment.append(history)
 
@@ -151,10 +164,13 @@ def plot_experiment(model_name):
 if __name__ == '__main__':
 
     np.random.seed(182390)
-    new = 0
-    
+    new = 1
+    max_n = 35
+    model_name = "one_nn"
+    online_epochs=100
+
     if new == 1:
-        create_new_experiment_file(model_name="linear_perceptron")
+        create_new_experiment_file(model_name=model_name)
     
-    run_experiment(model_name="linear_perceptron", max_n=35)
-    plot_experiment(model_name="linear_perceptron")
+    run_experiment(model_name=model_name, max_n=max_n, online_epochs=online_epochs)
+    plot_experiment(model_name=model_name)
