@@ -88,6 +88,9 @@ class LogisticRegression():
 
             a = self.predict_softmax(self.X_train, self.W)
             cost = self.get_cost(self.Y_encoding, a, self.n_examples)
+            loss = helpers.get_loss(self.Y_train, a)
+            print(cost)
+            print(1 - loss)
 
             W = self.get_gradient_descent_step(a) 
             self.history.append(cost)
