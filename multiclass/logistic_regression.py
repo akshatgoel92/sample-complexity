@@ -1,4 +1,5 @@
 import helpers
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -89,8 +90,6 @@ class LogisticRegression():
             a = self.predict_softmax(self.X_train, self.W)
             cost = self.get_cost(self.Y_encoding, a, self.n_examples)
             loss = helpers.get_loss(self.Y_train, a)
-            print(cost)
-            print(1 - loss)
 
             W = self.get_gradient_descent_step(a) 
             self.history.append(cost)
@@ -115,15 +114,12 @@ class LogisticRegression():
         return(preds, loss)
 
 
-def test():
+def test(lr, epochs):
 
     
-
-    np.random.seed(13290)
-
     data_args = {
 
-          'data_path': '../data',
+          'data_path': 'data',
           'name': 'zipcombo.dat', 
           'train_percent': 0.8,
           'k': 5,
@@ -140,7 +136,7 @@ def test():
     X_train, X_val, Y_train, Y_val, _, _ = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
 
     # Create weak learner object
-    weak_learner = LogisticRegression(lr=0.01, epochs=10, n_classes=10, 
+    weak_learner = LogisticRegression(lr=lr, epochs=epochs, n_classes=10, 
                                       n_features=256, X_train=X_train, Y_train=Y_train)
 
     # Train
@@ -158,6 +154,22 @@ def test():
 
 if __name__ == '__main__':
 
-    train_preds, train_loss, val_preds, val_loss = test()
+   np.random.seed(13290)
 
-    print(train_preds, train_loss, val_preds, val_loss)
+   parser = argparse.ArgumentParser(description='List the content of a folder')
+
+   parser.add_argument('lr', type=float, 
+                       help='Learning rate for weak learner....')
+
+
+   parser.add_argument('epochs', type=int, help='Epochs to train weak learner for...')
+
+   args = parser.parse_args()
+
+   lr = args.lr
+
+   epochs = args.epochs
+
+   train_preds, train_loss, val_preds, val_loss = test(lr, epochs)
+
+   print(train_loss, val_loss)

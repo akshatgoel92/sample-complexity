@@ -109,6 +109,11 @@ def run_experiment(model_name, max_n, online_epochs, min_m, max_iter):
     # Only converged results are in experiment
     start_n = len(experiment) + 1
 
+    if model_name == 'one_nn':
+        k = 1
+    else:
+        k = 10
+
     for n in range(start_n, max_n + 1):
         print(n)
         history = run_sample_complexity(n, 
@@ -119,7 +124,8 @@ def run_experiment(model_name, max_n, online_epochs, min_m, max_iter):
         if history['converged']:
             experiment.append(history)
 
-        if n%10 == 0: write_experiment(model_name, experiment)
+
+        if n%k == 0: write_experiment(model_name, experiment)
 
     write_experiment(model_name, experiment)
 
@@ -181,10 +187,20 @@ if __name__ == '__main__':
     parser.add_argument('new',
                          type=int, 
                          help='Specify the question number...')
+
+    parser.add_argument('run',
+                         type=int, 
+                         help='Specify the question number...')
+
+    parser.add_argument('plot',
+                         type=int, 
+                         help='Specify the question number...')
     
     args = parser.parse_args()
     model_name = args.model_name
     new = args.new
+    run = args.run
+    plot = args.plot
 
     np.random.seed(182390)
     min_m = 1
@@ -194,6 +210,10 @@ if __name__ == '__main__':
 
     if new == 1:
         create_new_experiment_file(model_name=model_name)
+
+    if run == 1:
+        run_experiment(model_name=model_name, max_n=max_n, 
+                       online_epochs=online_epochs, min_m=min_m, max_iter=max_iter)
     
-    run_experiment(model_name=model_name, max_n=max_n, online_epochs=online_epochs, min_m=min_m, max_iter=max_iter)
-    plot_experiment(model_name=model_name)
+    if plot == 1:
+        plot_experiment(model_name=model_name)
