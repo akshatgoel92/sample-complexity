@@ -1,5 +1,6 @@
 import kernel_perceptron as perceptron
 import numpy as np
+import argparse
 import helpers
 import time
 
@@ -35,6 +36,11 @@ def train_one_vs_one(datasets, tracker, masks, n_train, n_val,
   train_confidences = alpha_weights @ K_train
   val_confidences = alpha_weights @ K_val
 
+  print(n_train)
+  print(n_val)
+  print(val_confidences.shape)
+  print(K_val.shape)
+
   train_preds, val_preds = get_predictions(alpha_weights, tracker, train_confidences, val_confidences, 
                                            n_classes, n_train, n_val)
   
@@ -52,6 +58,7 @@ def get_predictions(alpha_weights, tracker, train_confidences, val_confidences,
     Update results from kth classifier
     '''
     k = 0
+    print(n_val)
     val_total_confidences = np.zeros((n_classes, n_val))
     train_total_confidences = np.zeros((n_classes, n_train))
     
@@ -334,13 +341,18 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
 
               tracker = trackers_by_fold[fold]
               masks = masks_by_fold[fold]
-              X_train_fold, Y_train_fold, Y_train_fold, Y_val_fold = splits_by_fold[fold]
+              X_train_fold, X_val_fold, Y_train_fold, Y_val_fold = splits_by_fold[fold]
 
-              K_train = helpers.get_polynomial_kernel(X_train_fold, X_train_fold, param)
-              K_val = helpers.get_polynomial_kernel(X_train_fold, X_val_fold, param)
+              K_train_fold = helpers.get_polynomial_kernel(X_train_fold, X_train_fold, param)
+              K_val_fold = helpers.get_polynomial_kernel(X_train_fold, X_val_fold, param)
 
-              n_train_fold = len(Y_train_fold)
-              n_val_fold = len(Y_val_fold)
+              n_train_fold = K_train_fold.shape[0]
+              n_val_fold = K_val_fold.shape[1]
+
+              print(K_val_fold.shape)
+              print(n_val_fold)
+              print(X_val_fold.shape)
+              print(Y_val_fold.shape)
             
               # Now train
               train_loss, val_loss = train_one_vs_one(datasets, tracker, masks, n_train_fold, n_val_fold,
@@ -369,14 +381,17 @@ def run_multiple_cv(params, data_args, epochs, n_classifiers,
         print("Retraining now...")
         print("The best parameter is {}....".format(best_param))
 
-        
+        K_train = helpers.get_polynomial_kernel(X_train, X_train, best_param)
+        K_test = helpers.get_polynomial_kernel(X_train, X_test, best_param)
+
         # We are ready to retrain
         best_train_loss, best_test_loss = train_one_vs_one(full_datasets, full_tracker, full_masks, 
                                                            n_train, n_test,
                                                            epochs, n_classifiers, question_no, 
                                                            convergence_epochs, fit_type, 
                                                            check_convergence, kernel_type, 
-                                                           param, n_classes, Y_train, Y_test)
+                                                           param, n_classes, Y_train, Y_test, 
+                                                           K_train, K_test)
         
         # Get retraining results and append
         results['best_param'].append(best_param)
@@ -402,7 +417,13 @@ if __name__ == '__main__':
   
   np.random.seed(1123)
 
-  question_no = 'multiple_one_vs_one'
+  parser = argparse.ArgumentParser(description='List the content of a folder')
+    
+  parser.add_argument('question_no',
+                      type=str, 
+                      help='Specify the question number...')
+  args = parser.parse_args()
+  question_no = args.question_no
 
   if question_no == 'test':
 
@@ -429,7 +450,7 @@ if __name__ == '__main__':
   if question_no == 'multiple_one_vs_one':
 
       # Store kernel parameter list to iterate over
-      params = [7]
+      params = [1, 2, 3, 4, 5, 6 ,7]
 
       # Store the arguments relating to the data set
       data_args = {
@@ -451,7 +472,7 @@ if __name__ == '__main__':
             'fit_type': 'one_vs_one',
             'check_convergence': True,
             'kernel_type': 'polynomial',
-            'total_runs': 1, 
+            'total_runs': 20, 
             'n_classes': 10
         }
 
@@ -486,7 +507,7 @@ if __name__ == '__main__':
         'fit_type': 'one_vs_one',
         'check_convergence': True,
         'kernel_type': 'polynomial',
-        'total_runs': 20 
+        'total_runs': 20
     }
 
     results = run_multiple_cv(params, data_args, **cv_args)

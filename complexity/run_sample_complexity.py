@@ -1,9 +1,11 @@
 import json
-import numpy as np 
+import argparse 
+import numpy as np
 import matplotlib.pyplot as plt
 from linear_regression import *
 from vanilla_perceptron import *
 from one_nn import *
+from winnow import *
 
 
 
@@ -13,7 +15,7 @@ def run_sample_complexity(n,
                           max_iter=100, 
                           step_size=1, 
                           n_test=20, 
-                          n_train = 100,
+                          n_train = 500,
                           target_test_error=0.1, 
                           size_test=100,
                           online_epochs=100):
@@ -53,6 +55,10 @@ def run_sample_complexity(n,
 
         if model_name == 'one_nn':
             models = [KNN(1, X_train, Y_train) for X_train, Y_train in current_train_m]
+
+        if model_name == 'winnow':
+            models = [Winnow(X_train, Y_train, online_epochs, n) for X_train, Y_train in current_train_m]
+
 
         if model_name != 'one_nn':
             train_errors = [model.fit() for model in models]
@@ -113,6 +119,8 @@ def run_experiment(model_name, max_n, online_epochs, min_m, max_iter):
         if history['converged']:
             experiment.append(history)
 
+        if n%10 == 0: write_experiment(model_name, experiment)
+
     write_experiment(model_name, experiment)
 
 
@@ -164,12 +172,24 @@ def plot_experiment(model_name):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='List the content of a folder')
+    
+    parser.add_argument('model_name',
+                         type=str, 
+                         help='Specify the question number...')
+
+    parser.add_argument('new',
+                         type=int, 
+                         help='Specify the question number...')
+    
+    args = parser.parse_args()
+    model_name = args.model_name
+    new = args.new
+
     np.random.seed(182390)
-    new = 1
     min_m = 1
-    max_n = 35
+    max_n = 100
     max_iter = 1000
-    model_name = "one_nn"
     online_epochs=100
 
     if new == 1:

@@ -68,16 +68,10 @@ class KNN:
         
             # Predictions based on nearest neighbor labels
             candidates, votes = np.unique(labels, return_counts = True)
-            # print("Votes:")
-            # print(candidates, votes)
 
             decision = np.where(votes == np.max(votes))[0].astype(int)
 
-            # print("Decision:")
-            # print(decision)
-
             candidates = candidates[decision]
-            # print(candidates)
 
             if len(votes > 1):
                 val_predictions.append(np.random.choice(candidates, size=1)[0])
