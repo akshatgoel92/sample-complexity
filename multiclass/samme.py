@@ -1,5 +1,6 @@
 from logistic_regression import LogisticRegression
 import helpers
+import argparse
 import numpy as np
 
 
@@ -64,18 +65,19 @@ class SAMME():
             # Train weak learner
             learner.train()
 
-            print(learner_id)
-            
             # Get predictions
             preds, loss = learner.predict(self.X_train, self.Y_train)
             
             # Calculate mistakes
             mistakes = (preds != self.Y_train).astype(int)
 
-            self.learner_mistakes.append((np.sum(mistakes)/len(Y_train)))
+            self.learner_mistakes.append((np.sum(mistakes)/len(self.Y_train)))
 
             # Compute the weighted learner error
             weighted_learner_error = np.sum(mistakes * self.w)/np.sum(self.w)
+
+            print("Weighted learner error:")
+            print(weighted_learner_error)
 
             # Compute alpha if the learner is not qualified, set to 0
             self.learner_weights[learner_id] = max(0, np.log(1/(weighted_learner_error + 1e-6) - 1) + np.log(self.n_classes - 1))
@@ -92,6 +94,7 @@ class SAMME():
             # Resample according to the updated weights
             X_train_new, Y_train_new = self.resample()
 
+            # Add learner
             self.learners.append(learner)
 
         self.learner_weights = self.learner_weights/np.sum(self.learner_weights)
@@ -107,13 +110,13 @@ class SAMME():
 
         for learner_id, learner in enumerate(self.learners):
             
-
             preds, _ = learner.predict(X, Y)
 
             preds = preds.astype(int)
 
             # Encode the prediction in to balanced array
-            prediction = np.full((self.n_classes, len(Y)), fill_value= -1/(self.n_classes-1), dtype=np.float32)
+            # prediction = np.full((self.n_classes, len(Y)), fill_value= -1/(self.n_classes-1), dtype=np.float32)
+            prediction = np.full((self.n_classes, len(Y)), fill_value= 0, dtype=np.float32)
 
             for obs, pred in enumerate(list(preds)):
 
@@ -140,6 +143,15 @@ class SAMME():
       self.history['train_loss'].append(train_loss)
       self.history['val_loss'].append(val_loss)
 
+      mistakes = np.array(self.learner_mistakes)
+
+      min_error = np.min(mistakes)
+      max_error = np.max(mistakes)
+      mean_error = np.mean(mistakes)
+      sd_error = np.std(mistakes)
+
+      results = (min_error, max_error, mean_error, sd_error)
+
       return(self.history)
 
 
@@ -147,6 +159,26 @@ class SAMME():
 if __name__ == '__main__':
 
    np.random.seed(13290)
+
+   parser = argparse.ArgumentParser(description='List the content of a folder')
+
+   parser.add_argument('n_learners',
+                      type=int, 
+                      help='Specify the number of weak learners...')
+
+   parser.add_argument('lr', type=float, 
+                       help='Learning rate for weak learner....')
+
+
+   parser.add_argument('epochs', type=int, help='Epochs to train weak learner for...')
+
+   args = parser.parse_args()
+
+   n_learners = args.n_learners
+
+   lr = args.lr
+
+   epochs = args.epochs
 
    data_args = {
 
@@ -167,15 +199,9 @@ if __name__ == '__main__':
    X_train, X_val, Y_train, Y_val, _, _ = helpers.split_data(X_shuffle, Y_shuffle, perm, data_args['train_percent'])
 
    n_classes=10
-   
-   n_learners=100
-
-   lr = 0.10
-
-   epochs = 5
 
    example_samme = SAMME(lr, epochs, n_classes, n_learners, X_train, Y_train, X_val, Y_val)
 
-   history = example_samme.fit()
+   history, results = example_samme.fit()
 
-   print(history)
+   print(history, results)

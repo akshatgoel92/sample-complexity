@@ -1,4 +1,5 @@
-from knn import *  
+from knn import *
+from samme import *  
 import argparse
 import time
 
@@ -26,7 +27,7 @@ def run_test_case():
     return(history)
 
 
-def run_multiple(params, data_args, total_runs, model, question_no):
+def run_multiple(params, data_args, total_runs, model, question_no, lr = 0.01, epochs=1, n_classes=10):
     '''
     Run multiple runs of kernel 
     perceptron training with a given 
@@ -93,6 +94,12 @@ def run_multiple(params, data_args, total_runs, model, question_no):
                 history = knn.fit()
                 train_loss = history['train_loss'][0]
                 val_loss = history['val_loss'][0]
+
+            if model == 'samme':
+                samme = SAMME(lr, epochs, n_classes, param, *data)
+                history = samme.fit()
+                train_loss = history['train_loss'][0]
+                val_loss = history['val_loss'][0]
             
             # Store results and mistakes
             histories['train_loss'].append(train_loss)
@@ -115,7 +122,7 @@ def run_multiple(params, data_args, total_runs, model, question_no):
     return(results)
 
 
-def run_multiple_cv(params, data_args, total_runs, question_no, model):
+def run_multiple_cv(params, data_args, total_runs, question_no, model, lr=0.01, epochs=1, n_classes=10):
     '''Check which kernel parameter results
     in lowest validation loss
     --------------------------------------
@@ -181,6 +188,10 @@ def run_multiple_cv(params, data_args, total_runs, question_no, model):
             if model == 'knn':
                 knn_estimators = [KNN(param, *fold) for fold in folds]
                 fold_histories = [knn.fit() for knn in knn_estimators]
+
+            if model == 'samme':
+                samme_estimators = [SAMME(lr, epochs, param, *fold) for fold in folds]
+                fold_histories = [samme.fit() for knn in knn_estimators]
         
             # Get avg. accuracies by epoch across folds
             cv_train_loss, cv_val_loss = helpers.get_cv_results(fold_histories)
@@ -201,6 +212,10 @@ def run_multiple_cv(params, data_args, total_runs, question_no, model):
         if model == 'knn':
             best_knn = KNN(best_param, X_train, Y_train, X_test, Y_test)
             history = best_knn.fit()
+
+        if model == 'samme':
+            best_samme = SAMME(lr, epochs, best_param, X_train, Y_train, X_test, Y_test)
+            history = best_samme.fit()
         
         # Get retraining results and append
         results['best_param'].append(best_param)
@@ -284,3 +299,34 @@ if __name__ == '__main__':
         }
 
         run_multiple_cv(params, data_args, **cv_args)
+
+
+    if question_no == 'samme_grid':
+
+        np.random.seed(372123)
+
+        params = list(np.arange(2, 100, 2))
+
+        multiple_run_args = {
+    
+            'total_runs': 5,
+            'model': 'samme',
+            'question_no': question_no
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
+
+    if question_no == 'samme_multiple':
+
+        np.random.seed(372123)
+
+        params = list(np.arange(60, 100, 2))
+
+        multiple_run_args = {
+    
+            'total_runs': 20,
+            'model': 'samme',
+            'question_no': question_no
+        }
+
+        run_multiple(params, data_args, **multiple_run_args)
