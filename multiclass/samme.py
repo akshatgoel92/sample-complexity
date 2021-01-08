@@ -115,9 +115,8 @@ class SAMME():
             preds = preds.astype(int)
 
             # Encode the prediction in to balanced array
-            # prediction = np.full((self.n_classes, len(Y)), fill_value= -1/(self.n_classes-1), dtype=np.float32)
-            prediction = np.full((self.n_classes, len(Y)), fill_value= 0, dtype=np.float32)
-
+            prediction = np.full((self.n_classes, len(Y)), fill_value= -1/(self.n_classes-1), dtype=np.float32)
+            
             for obs, pred in enumerate(list(preds)):
 
               prediction[pred, obs] = 1
