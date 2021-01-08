@@ -15,7 +15,7 @@ def run_sample_complexity(n,
                           max_iter=100, 
                           step_size=1, 
                           n_test=20, 
-                          n_train = 500,
+                          n_train = 100,
                           target_test_error=0.1, 
                           size_test=100,
                           online_epochs=100):
@@ -112,7 +112,7 @@ def run_experiment(model_name, max_n, online_epochs, min_m, max_iter):
     if model_name == 'one_nn':
         k = 1
     else:
-        k = 10
+        k = 5
 
     for n in range(start_n, max_n + 1):
         print(n)
@@ -204,7 +204,7 @@ if __name__ == '__main__':
 
     np.random.seed(182390)
     min_m = 1
-    max_n = 100
+    max_n = 20
     max_iter = 1000
     online_epochs=100
 
