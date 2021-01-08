@@ -190,8 +190,8 @@ def run_multiple_cv(params, data_args, total_runs, question_no, model, lr=0.01, 
                 fold_histories = [knn.fit() for knn in knn_estimators]
 
             if model == 'samme':
-                samme_estimators = [SAMME(lr, epochs, param, *fold) for fold in folds]
-                fold_histories = [samme.fit() for knn in knn_estimators]
+                samme_estimators = [SAMME(lr, epochs, n_classes, param, *fold) for fold in folds]
+                fold_histories = [samme.fit() for samme in samme_estimators]
         
             # Get avg. accuracies by epoch across folds
             cv_train_loss, cv_val_loss = helpers.get_cv_results(fold_histories)
@@ -214,7 +214,7 @@ def run_multiple_cv(params, data_args, total_runs, question_no, model, lr=0.01, 
             history = best_knn.fit()
 
         if model == 'samme':
-            best_samme = SAMME(lr, epochs, best_param, X_train, Y_train, X_test, Y_test)
+            best_samme = SAMME(lr, epochs, n_classes, best_param, X_train, Y_train, X_test, Y_test)
             history = best_samme.fit()
         
         # Get retraining results and append
@@ -318,8 +318,6 @@ if __name__ == '__main__':
 
     if question_no == 'samme_multiple':
 
-        np.random.seed(372123)
-
         params = list(np.arange(60, 100, 2))
 
         multiple_run_args = {
@@ -330,3 +328,15 @@ if __name__ == '__main__':
         }
 
         run_multiple(params, data_args, **multiple_run_args)
+
+    if question_no == 'samme_cv':
+
+        params = list(np.arange(60, 100, 2))
+        cv_args = {
+            
+            'question_no': question_no,
+            'total_runs': 20,
+            'model': 'samme' 
+        }
+
+        run_multiple_cv(params, data_args, **cv_args)
