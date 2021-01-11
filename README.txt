@@ -48,6 +48,8 @@ For part 1: Multi-Class Classification:
 	
 	For SAMME results: python multiclass/run_alternate.py 'table_x'
 
+	For logistic regression plots: python multiclass/logistic_regression.py 0.001 500
+
 For part 1: Multi-class Classification: 
 	[After running the above]
 
