@@ -257,7 +257,7 @@ if __name__ == '__main__':
 
         run_test_case()
 
-    if question_no == 'knn_grid':
+    if question_no == 'table_24':
 
         np.random.seed(2312319)
 
@@ -273,7 +273,7 @@ if __name__ == '__main__':
         run_multiple(params, data_args, **multiple_run_args)
 
 
-    if question_no == 'knn_multiple':
+    if question_no == 'table_17':
 
         params = [1, 2, 3, 4, 5, 6, 7]
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
         run_multiple(params, data_args, **multiple_run_args)
 
 
-    if question_no == 'knn_cv':
+    if question_no == 'table_19':
 
         params = [1, 2, 3, 4, 5, 6, 7]
 
@@ -301,7 +301,7 @@ if __name__ == '__main__':
         run_multiple_cv(params, data_args, **cv_args)
 
 
-    if question_no == 'samme_grid':
+    if question_no == 'table_25':
 
         np.random.seed(372123)
 
@@ -316,7 +316,7 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if question_no == 'samme_multiple':
+    if question_no == 'table_20':
 
         params = list(np.arange(60, 100, 2))
 
@@ -329,7 +329,7 @@ if __name__ == '__main__':
 
         run_multiple(params, data_args, **multiple_run_args)
 
-    if question_no == 'samme_cv':
+    if question_no == 'table_21':
 
         params = list(np.arange(60, 100, 2))
         cv_args = {

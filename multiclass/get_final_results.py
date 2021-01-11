@@ -1,6 +1,6 @@
 import os
 import pickle
-import helpers
+from multiclass import helpers
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt

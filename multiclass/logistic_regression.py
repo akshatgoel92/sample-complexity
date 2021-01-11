@@ -12,7 +12,7 @@ class LogisticRegression():
 
         
         self.lr = lr 
-        self.history = []
+        self.history = {'cost': [], 'loss': []}
         
         self.epochs = epochs
         self.n_classes = n_classes
@@ -89,10 +89,12 @@ class LogisticRegression():
 
             a = self.predict_softmax(self.X_train, self.W)
             cost = self.get_cost(self.Y_encoding, a, self.n_examples)
-            loss = helpers.get_loss(self.Y_train, a)
+            loss = helpers.get_loss(self.Y_train, np.argmax(a, axis=1))
 
             W = self.get_gradient_descent_step(a) 
-            self.history.append(cost)
+            self.history['cost'].append(cost)
+            self.history['loss'].append(loss)
+            print(cost, loss)
 
         return(self.history, self.W)
 
@@ -140,7 +142,7 @@ def test(lr, epochs):
                                       n_features=256, X_train=X_train, Y_train=Y_train)
 
     # Train
-    weak_learner.train()
+    history, _ = weak_learner.train()
 
     # Get training predictions and loss
     train_preds, train_loss = weak_learner.predict(X_train, Y_train)
@@ -148,7 +150,7 @@ def test(lr, epochs):
     # Evaluate
     val_preds, val_loss = weak_learner.predict(X_val, Y_val)
 
-    return(train_preds, train_loss, val_preds, val_loss)
+    return(history, train_preds, train_loss, val_preds, val_loss)
 
 
 
@@ -170,6 +172,11 @@ if __name__ == '__main__':
 
    epochs = args.epochs
 
-   train_preds, train_loss, val_preds, val_loss = test(lr, epochs)
+   history, train_preds, train_loss, val_preds, val_loss = test(lr, epochs)
+
+   print(history)
+
+   helpers.get_loss_plot(history, model_name="logistic_regression", y_name='loss')
+   helpers.get_loss_plot(history, model_name="logistic_regression", y_name='cost')
 
    print(train_loss, val_loss)

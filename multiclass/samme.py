@@ -76,12 +76,11 @@ class SAMME():
             # Compute the weighted learner error
             weighted_learner_error = np.sum(mistakes * self.w)/np.sum(self.w)
 
-            print("Weighted learner error:")
-            print(weighted_learner_error)
-
             # Compute alpha if the learner is not qualified, set to 0
             self.learner_weights[learner_id] = max(0, np.log(1/(weighted_learner_error + 1e-6) - 1) + np.log(self.n_classes - 1))
             
+            print(str(np.sum(self.learner_weights == 0)) + "is the number of unqualified learners....")
+
             # Create alpha matrix that we can use to take an element-wise product with the mistakes vector
             alpha = np.full((self.n_samples,), fill_value=self.learner_weights[learner_id], dtype=np.float32)
             

@@ -18,7 +18,9 @@ def open_results(question_no, id):
     return(results)
 
 
-def compute_final_cf(n_classes = 10, question_no='1.2', id=31, dest = './results/confusion_matrix_correct.csv'):
+def compute_final_cf(n_classes = 10, question_no='1.2', id=31, 
+                     dest = './results/confusion_matrix_correct.csv',
+                     dest_std = "./results/confusion_matrix_std.csv"):
     '''
     Post-process the final CF into the format required by
     the question
@@ -30,34 +32,51 @@ def compute_final_cf(n_classes = 10, question_no='1.2', id=31, dest = './results
     cf = np.zeros((n_classes, n_classes))
 
     for result in test_cf:
-        np.fill_diagonal(result, 0)
         cf = np.add(cf, result)
 
-    cf = pd.DataFrame(cf/cf.sum(axis=1,keepdims=1)*100)
+    cf = cf/cf.sum(axis=1, keepdims=1)*100
+    np.fill_diagonal(cf, 0)
+    
+    for result in test_cf:
+        result = result/result.sum(axis=1, keepdims=1)*100
 
-    cf.to_csv(dest)
+    cf_std = np.std(np.array(test_cf), axis=0)
+    np.fill_diagonal(cf_std, 0)
 
-    return(cf)
+    pd.DataFrame(cf).to_csv(dest)
+    pd.DataFrame(cf_std).to_csv(dest_std)
+
+    return(cf, cf_std)
 
 
-def process_frequent_mistakes(question_no = '1.1_polynomial_get_images_cv_mistakes', id=9):
+def process_frequent_mistakes(question_no = '1.1_polynomial_get_images_cv_mistakes', id=9, train=True):
     '''
     Store images of frequent mistakes
     '''
     results = open_results(question_no, id)
 
-    mistakes = results['mistakes']
-    mistakes = np.vstack(np.unique(np.concatenate(mistakes), return_counts = True)).T
+    if train: 
+        results_type = 'train_mistakes'
+        largest_n = 5
+    else:
+        results_type = 'mistakes'
+        largest_n = 2
 
+    results_name = results_type + '_worst_5'
+    
+    mistakes = np.vstack(np.unique(np.concatenate(results[results_type]), return_counts = True)).T
+    
     sorted_mistakes = mistakes[np.argsort(mistakes[: ,1])]
-    sorted_mistakes = sorted_mistakes[-5:, 0]
+    print(sorted_mistakes)
+    
+    sorted_mistakes = sorted_mistakes[-largest_n:, 0]
+    print(sorted_mistakes)
 
     X, Y = helpers.load_data('data', 'zipcombo.dat')
-
     imgs = X[sorted_mistakes]
-
-    for i, img_no in sorted_mistakes:
-        show_images(X[img_no], path = 'results/{}_{}_{}.png'.format(img_no, Y[img_no], sorted_mistakes[i, 1]))
+    print(Y[sorted_mistakes])
+    
+    plot_imgs(imgs, path = 'results/{}.png'.format(results_name))
 
 
 
@@ -73,3 +92,10 @@ def plot_imgs(imgs, shape=(16, 16), path='results/test.png'):
     plt.imshow(img.reshape(shape))
   
   plt.savefig(path)
+
+
+if __name__ == '__main__':
+
+    # compute_final_cf()
+    process_frequent_mistakes()
+    process_frequent_mistakes(train=False)

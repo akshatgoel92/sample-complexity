@@ -160,21 +160,22 @@ def get_confusion_matrix(target, pred):
 
 
 
-def get_loss_plot(results, lab, run_no, param):
+def get_loss_plot(history, model_name, y_name='loss'):
   '''
   Convenience function to plot results
   '''
   # Store model name and destination path
-  model_name = str(run_no) + '_' + str(param) + '_results.png'
+  model_name =  '{}_{}_results.png'.format(model_name, y_name)
   path = os.path.join('figs', model_name)
   
   # Plot the results
-  plt.plot(results['train_' + lab], label='Train')
-  plt.plot(results['val_' + lab], label='Validation')
+  plt.plot(history[y_name], label="Training set {}".format(y_name))
   
   # Add annotations
   plt.legend()
-  plt.title(lab.title() + ' by Epoch')
+  plt.xlabel("Epoch")
+  plt.ylabel(y_name.title())
+  plt.title(y_name.title() + ' by Epoch')
   
   # Save the figure and close the plot
   plt.savefig(path)

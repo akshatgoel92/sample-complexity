@@ -447,7 +447,7 @@ if __name__ == '__main__':
 
   
 
-  if question_no == 'multiple_one_vs_one':
+  if question_no == 'table_12':
 
       # Store kernel parameter list to iterate over
       params = [1, 2, 3, 4, 5, 6 ,7]
@@ -479,7 +479,7 @@ if __name__ == '__main__':
       results = run_multiple(params, data_args, **multiple_run_args)
 
   
-  if question_no == 'cv_one_vs_one':
+  if question_no == 'table_14':
 
     # Store kernel parameter list to iterate over
     params = [1, 2, 3, 4, 5, 6, 7]
