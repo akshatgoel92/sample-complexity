@@ -1,6 +1,6 @@
 import os
 import pickle
-from multiclass import helpers
+import helpers
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -19,8 +19,8 @@ def open_results(question_no, id):
 
 
 def compute_final_cf(n_classes = 10, question_no='1.2', id=31, 
-                     dest = './results/confusion_matrix_correct.csv',
-                     dest_std = "./results/confusion_matrix_std.csv"):
+                     dest = 'results/confusion_matrix_correct.csv',
+                     dest_std = "results/confusion_matrix_std.csv"):
     '''
     Post-process the final CF into the format required by
     the question
@@ -96,6 +96,6 @@ def plot_imgs(imgs, shape=(16, 16), path='results/test.png'):
 
 if __name__ == '__main__':
 
-    # compute_final_cf()
+    compute_final_cf()
     process_frequent_mistakes()
     process_frequent_mistakes(train=False)

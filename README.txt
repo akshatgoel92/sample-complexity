@@ -32,11 +32,11 @@ src
  |   +-- get_misc_results.py
  |   +-- knn_visualization.py
  |   +-- sammon.py
-
+     +-- helpers.py
 
 # Reproducing tables 
 
-In all the commands below replace 'table_x' with 'table_1' for Table 1, 'table_2' for Table 2, and so on. There is no check to see whether the table no. is correct so please check the report to ensure this. 
+In all the commands below replace 'table_x' with 'table_1' for Table 1, 'table_2' for Table 2, and so on. There is no check to see whether the table no. is correct so please check the report to ensure this. Please note that the results for multiple runs are generated together. Please put in the table no. of the training set results table from the report to get both sets of results.
 
 For part 1: Multi-Class Classification: 
 
@@ -49,7 +49,8 @@ For part 1: Multi-Class Classification:
 	For SAMME results: python multiclass/run_alternate.py 'table_x'
 
 For part 1: Multi-class Classification: 
-	
+	[After running the above]
+
 	For confusion matrix and mistake analysis: python misc/get_final_results.py 
 	
 	For k-nearest neighbours data visualisations: python misc/knn_visualization.py
